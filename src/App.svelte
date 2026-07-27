@@ -4,8 +4,9 @@
   import Sidebar from './Sidebar.svelte'
   import KsefCredentialsForm from './KsefCredentialsForm.svelte'
   import Invoices from './Invoices.svelte'
+  import InvoicePreviewModal from './InvoicePreviewModal.svelte'
   import { requestGoogleAccessToken } from './lib/googleAuth'
-  import { Icon, ArrowPath, Document, Trash } from 'svelte-hero-icons'
+  import { Icon, ArrowPath, Document, Trash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
   import {
     ensureKsefFolder,
     ensureConfigFolder,
@@ -13,6 +14,7 @@
     fetchJsonFromConfig,
     deleteJsonFromConfig,
     deleteFile,
+    downloadFileText,
     ensureYearFolders,
     listMonthCategories,
     type CategorySection,
@@ -45,6 +47,31 @@
   let invoicesDb = $state<InvoicesDb>({})
   let removingFileId = $state<string | null>(null)
   let driveSyncCount = $state(0)
+
+  let previewFileId = $state<string | null>(null)
+  let previewXml = $state<string | null>(null)
+  let previewLoading = $state(false)
+  let previewError = $state<string | null>(null)
+
+  async function openFilePreview(fileId: string) {
+    previewFileId = fileId
+    previewXml = null
+    previewError = null
+    previewLoading = true
+    try {
+      previewXml = await downloadFileText(accessToken!, fileId)
+    } catch (error) {
+      previewError = error instanceof Error ? error.message : 'Failed to load invoice'
+    } finally {
+      previewLoading = false
+    }
+  }
+
+  function closeFilePreview() {
+    previewFileId = null
+    previewXml = null
+    previewError = null
+  }
 
   // Runs a Drive task in the background without blocking the caller, while
   // tracking it so the navbar can show a "syncing" indicator. Used for work
@@ -316,7 +343,7 @@
         onClose={() => (sidebarOpen = false)}
         {accessToken}
         {ksefFolderId}
-        {selectedFolderId}
+        selectedFolderId={currentView === 'files' ? selectedFolderId : null}
         onSelectFolder={(folderId) => {
           selectedFolderId = folderId
           currentView = 'files'
@@ -408,11 +435,12 @@
                         <div class="overflow-x-auto">
                           <table class="w-full table-fixed">
                             <colgroup>
+                              <col class="w-[13%]" />
+                              <col class="w-[32%]" />
                               <col class="w-[14%]" />
-                              <col class="w-[36%]" />
-                              <col class="w-[16%]" />
-                              <col class="w-[16%]" />
-                              <col class="w-[18%]" />
+                              <col class="w-[14%]" />
+                              <col class="w-[12%]" />
+                              <col class="w-[15%]" />
                             </colgroup>
                             <thead>
                               <tr class="border-b border-gray-200">
@@ -422,6 +450,7 @@
                                 </th>
                                 <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Gross</th>
                                 <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">VAT</th>
+                                <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Preview</th>
                                 <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Remove</th>
                               </tr>
                             </thead>
@@ -441,6 +470,19 @@
                                   </td>
                                   <td class="py-4 px-4 text-sm text-right text-gray-900">
                                     {entry ? `${entry.metadata.vatAmount.toFixed(2)} ${entry.metadata.currency}` : '-'}
+                                  </td>
+                                  <td class="py-4 px-4">
+                                    <div class="flex items-center justify-center">
+                                      <button
+                                        type="button"
+                                        onclick={() => openFilePreview(file.id)}
+                                        title="Preview invoice"
+                                        aria-label="Preview invoice"
+                                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
+                                      >
+                                        <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   </td>
                                   <td class="py-4 px-4 text-right">
                                     <button
@@ -467,6 +509,17 @@
                               <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-gray-900 truncate">{file.name}</p>
                               </div>
+                              {#if file.name.toLowerCase().endsWith('.xml')}
+                                <button
+                                  type="button"
+                                  onclick={() => openFilePreview(file.id)}
+                                  title="Preview invoice"
+                                  aria-label="Preview invoice"
+                                  class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-200 transition-all flex-shrink-0"
+                                >
+                                  <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
+                                </button>
+                              {/if}
                             </div>
                           {/each}
                         </div>
@@ -497,3 +550,7 @@
     </main>
   </div>
 </div>
+
+{#if previewFileId}
+  <InvoicePreviewModal xml={previewXml} loading={previewLoading} error={previewError} onClose={closeFilePreview} />
+{/if}

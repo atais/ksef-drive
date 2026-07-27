@@ -470,6 +470,20 @@ async function searchFile(accessToken: string, filename: string, parentId: strin
   }
 }
 
+export async function downloadFileText(accessToken: string, fileId: string): Promise<string> {
+  const response = await fetch(`${DRIVE_API}/files/${fileId}?alt=media`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Drive API error: ${response.status}`)
+  }
+
+  return await response.text()
+}
+
 export async function deleteFile(accessToken: string, fileId: string): Promise<void> {
   const response = await fetch(`${DRIVE_API}/files/${fileId}`, {
     method: 'DELETE',

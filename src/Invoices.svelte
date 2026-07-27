@@ -13,7 +13,8 @@
     type InvoiceCategoryFolder,
   } from './gdrive/googleDriveService'
   import { loadInvoicesDb, saveInvoicesDb, type InvoicesDb, type InvoiceDbEntry } from './gdrive/invoicesDb'
-  import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash } from 'svelte-hero-icons'
+  import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
+  import InvoicePreviewModal from './InvoicePreviewModal.svelte'
 
   interface Props {
     sessionToken: string
@@ -96,6 +97,31 @@
   let error = $state<string | null>(null)
   let savingKsefNumber = $state<string | null>(null)
   let statusFilter = $state<StatusFilter>('pending')
+
+  let previewKsefNumber = $state<string | null>(null)
+  let previewXml = $state<string | null>(null)
+  let previewLoading = $state(false)
+  let previewError = $state<string | null>(null)
+
+  async function openPreview(ksefNumber: string) {
+    previewKsefNumber = ksefNumber
+    previewXml = null
+    previewError = null
+    previewLoading = true
+    try {
+      previewXml = await downloadInvoiceXml(sessionToken, ksefNumber)
+    } catch (err) {
+      previewError = err instanceof Error ? err.message : 'Failed to load invoice'
+    } finally {
+      previewLoading = false
+    }
+  }
+
+  function closePreview() {
+    previewKsefNumber = null
+    previewXml = null
+    previewError = null
+  }
 
   const invoices = $derived(
     Object.values(db)
@@ -366,6 +392,7 @@
             <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Gross</th>
             <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">VAT</th>
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filing</th>
+            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Preview</th>
             <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">
               {statusFilter === 'added' ? 'Remove' : 'Approve'}
             </th>
@@ -406,6 +433,19 @@
                       <option value={option}>{option}</option>
                     {/each}
                   </select>
+                </div>
+              </td>
+              <td class="py-4 px-4">
+                <div class="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onclick={() => openPreview(invoice.ksefNumber)}
+                    title="Preview invoice"
+                    aria-label="Preview invoice"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
+                  </button>
                 </div>
               </td>
               <td class="py-4 px-4">
@@ -474,3 +514,7 @@
     </div>
   {/if}
 </div>
+
+{#if previewKsefNumber}
+  <InvoicePreviewModal xml={previewXml} loading={previewLoading} error={previewError} onClose={closePreview} />
+{/if}
