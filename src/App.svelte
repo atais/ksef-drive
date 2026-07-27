@@ -5,16 +5,19 @@
   import KsefCredentialsForm from './KsefCredentialsForm.svelte'
   import Invoices from './Invoices.svelte'
   import { requestGoogleAccessToken } from './lib/googleAuth'
+  import { Icon, ArrowPath, Document, Trash } from 'svelte-hero-icons'
   import {
     ensureKsefFolder,
     ensureConfigFolder,
     saveJsonToConfig,
     fetchJsonFromConfig,
     deleteJsonFromConfig,
+    deleteFile,
     ensureYearFolders,
     listMonthCategories,
     type CategorySection,
   } from './gdrive/googleDriveService'
+  import { loadInvoicesDb, saveInvoicesDb, type InvoicesDb } from './gdrive/invoicesDb'
   import { authenticateWithKsef, type KsefCredentials } from './ksef/ksefService'
 
   interface StoredSession {
@@ -39,6 +42,8 @@
   let ksefFolderId = $state<string | null>(null)
   let selectedFolderId = $state<string | null>(null)
   let categorySections = $state<CategorySection[]>([])
+  let invoicesDb = $state<InvoicesDb>({})
+  let removingFileId = $state<string | null>(null)
   let driveSyncCount = $state(0)
 
   // Runs a Drive task in the background without blocking the caller, while
@@ -153,6 +158,9 @@
     loading = true
     try {
       categorySections = await listMonthCategories(accessToken, selectedFolderId)
+      if (configFolderId) {
+        invoicesDb = await loadInvoicesDb(accessToken, configFolderId)
+      }
     } catch (error) {
       console.error('Failed to refresh files:', error)
     } finally {
@@ -164,9 +172,17 @@
     if (currentView !== 'files' || !selectedFolderId || !accessToken) return
 
     let cancelled = false
-    listMonthCategories(accessToken, selectedFolderId)
-      .then((sections) => {
-        if (!cancelled) categorySections = sections
+    loading = true
+    categorySections = []
+    Promise.all([
+      listMonthCategories(accessToken, selectedFolderId),
+      configFolderId ? loadInvoicesDb(accessToken, configFolderId) : Promise.resolve(invoicesDb),
+    ])
+      .then(([sections, db]) => {
+        if (!cancelled) {
+          categorySections = sections
+          invoicesDb = db
+        }
       })
       .catch((error) => console.error('Failed to refresh files:', error))
       .finally(() => {
@@ -177,6 +193,38 @@
       cancelled = true
     }
   })
+
+  // Strips the .xml extension a filed invoice was saved under to recover its
+  // ksefNumber, the invoicesDb key.
+  function ksefNumberFromFilename(filename: string): string {
+    return filename.replace(/\.xml$/i, '')
+  }
+
+  // Removes a filed invoice: deletes it from Drive and clears its accepted
+  // flag in the DB, so it shows back up as not-added on the Invoices page.
+  async function removeFile(fileId: string, filename: string) {
+    if (!accessToken) return
+    removingFileId = fileId
+    try {
+      await deleteFile(accessToken, fileId)
+      categorySections = categorySections.map((section) => ({
+        ...section,
+        files: section.files.filter((f) => f.id !== fileId),
+      }))
+
+      const ksefNumber = ksefNumberFromFilename(filename)
+      const entry = invoicesDb[ksefNumber]
+      if (entry && configFolderId) {
+        const nextDb = { ...invoicesDb, [ksefNumber]: { ...entry, accepted: false } }
+        await saveInvoicesDb(accessToken, configFolderId, nextDb)
+        invoicesDb = nextDb
+      }
+    } catch (error) {
+      console.error('Failed to remove file:', error)
+    } finally {
+      removingFileId = null
+    }
+  }
 
   function handleLogout() {
     localStorage.removeItem('gdrive_session')
@@ -280,9 +328,7 @@
         {#if restoring}
           <div class="min-h-[calc(100vh-64px)] flex items-center justify-center">
             <div class="text-center">
-              <svg class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-              </svg>
+              <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
               <p class="text-gray-600">Restoring session...</p>
             </div>
           </div>
@@ -328,14 +374,10 @@
                   class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-600/30"
                 >
                   {#if loading}
-                    <svg class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
+                    <Icon src={ArrowPath} class="w-5 h-5 mr-2 animate-spin" />
                     Loading...
                   {:else}
-                    <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
+                    <Icon src={ArrowPath} class="w-5 h-5 mr-2" />
                     Refresh Files
                   {/if}
                 </button>
@@ -343,32 +385,91 @@
 
               {#if !selectedFolderId}
                 <div class="text-center py-12">
-                  <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                  </svg>
+                  <Icon src={Document} class="w-16 h-16 text-gray-400 mx-auto mb-4" />
                   <p class="text-gray-600 font-medium">Pick a month</p>
                   <p class="text-gray-500 text-sm">Select a month in the sidebar to see its files</p>
+                </div>
+              {:else if loading && categorySections.length === 0}
+                <div class="flex items-center justify-center py-20">
+                  <div class="text-center">
+                    <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                    <p class="text-gray-600">Loading files...</p>
+                  </div>
                 </div>
               {:else}
                 <div class="space-y-6">
                   {#each categorySections as section (section.key)}
+                    {@const isInvoiceCategory = section.key === '_Sprzedaz' || section.key === '_Koszty'}
                     <div class="bg-white rounded-xl border border-gray-200 p-8">
                       <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.title}</h3>
-                      {#if section.files.length > 0}
+                      {#if section.files.length === 0}
+                        <p class="text-sm text-gray-400">No files</p>
+                      {:else if isInvoiceCategory}
+                        <div class="overflow-x-auto">
+                          <table class="w-full table-fixed">
+                            <colgroup>
+                              <col class="w-[14%]" />
+                              <col class="w-[36%]" />
+                              <col class="w-[16%]" />
+                              <col class="w-[16%]" />
+                              <col class="w-[18%]" />
+                            </colgroup>
+                            <thead>
+                              <tr class="border-b border-gray-200">
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Issue Date</th>
+                                <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                                  {section.key === '_Sprzedaz' ? 'To' : 'From'}
+                                </th>
+                                <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Gross</th>
+                                <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">VAT</th>
+                                <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Remove</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {#each section.files as file (file.id)}
+                                {@const entry = invoicesDb[ksefNumberFromFilename(file.name)]}
+                                {@const counterpartyLabel = !entry
+                                  ? file.name
+                                  : section.key === '_Sprzedaz'
+                                    ? entry.metadata.buyer?.name ?? entry.metadata.buyer?.identifier?.value ?? file.name
+                                    : entry.metadata.seller?.name ?? entry.metadata.seller?.nip ?? file.name}
+                                <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                  <td class="py-4 px-4 text-sm text-gray-600">{entry?.metadata.issueDate ?? '-'}</td>
+                                  <td class="py-4 px-4 text-sm text-gray-900 truncate">{counterpartyLabel}</td>
+                                  <td class="py-4 px-4 text-sm text-right text-gray-900">
+                                    {entry ? `${entry.metadata.grossAmount.toFixed(2)} ${entry.metadata.currency}` : '-'}
+                                  </td>
+                                  <td class="py-4 px-4 text-sm text-right text-gray-900">
+                                    {entry ? `${entry.metadata.vatAmount.toFixed(2)} ${entry.metadata.currency}` : '-'}
+                                  </td>
+                                  <td class="py-4 px-4 text-right">
+                                    <button
+                                      type="button"
+                                      onclick={() => removeFile(file.id, file.name)}
+                                      disabled={removingFileId === file.id}
+                                      title="Remove from Drive"
+                                      aria-label="Remove from Drive"
+                                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-all"
+                                    >
+                                      <Icon src={Trash} class="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              {/each}
+                            </tbody>
+                          </table>
+                        </div>
+                      {:else}
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {#each section.files as file (file.id)}
                             <div class="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 transition-all hover:shadow-md">
-                              <svg class="w-6 h-6 text-blue-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                              </svg>
+                              <Icon src={Document} class="w-6 h-6 text-blue-600 flex-shrink-0" />
                               <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-gray-900 truncate">{file.name}</p>
                               </div>
                             </div>
                           {/each}
                         </div>
-                      {:else}
-                        <p class="text-sm text-gray-400">No files</p>
                       {/if}
                     </div>
                   {/each}
@@ -380,9 +481,14 @@
           <div class="min-h-[calc(100vh-64px)] p-4 sm:p-8">
             <div class="space-y-6">
               {#if ksefSessionToken}
-                <Invoices sessionToken={ksefSessionToken} {accessToken} {ksefFolderId} userNip={ksefCredentials.nip} />
+                <Invoices sessionToken={ksefSessionToken} {accessToken} {ksefFolderId} {configFolderId} userNip={ksefCredentials.nip} />
               {:else}
-                <p class="text-gray-600">Connecting to KSEF...</p>
+                <div class="flex items-center justify-center py-20">
+                  <div class="text-center">
+                    <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                    <p class="text-gray-600">Connecting to KSEF...</p>
+                  </div>
+                </div>
               {/if}
             </div>
           </div>

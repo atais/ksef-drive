@@ -1,5 +1,6 @@
 <script lang="ts">
   import { listYearMonthTree, type YearFolder } from './gdrive/googleDriveService'
+  import { Icon, ChevronDown, ChevronRight, ArchiveBox } from 'svelte-hero-icons'
 
   interface Props {
     isOpen: boolean
@@ -74,17 +75,11 @@
               class="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
             >
               {#if expanded}
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
+                <Icon src={ChevronDown} class="w-4 h-4 flex-shrink-0" />
               {:else}
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
+                <Icon src={ChevronRight} class="w-4 h-4 flex-shrink-0" />
               {/if}
-              <svg class="w-4 h-4 flex-shrink-0 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-19.5 0v6a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25v-6m-19.5 0h19.5M12 9.75V4.5a2.25 2.25 0 0 0-2.25-2.25H8.508c-.529 0-1.037.184-1.44.522L4.5 4.5" />
-              </svg>
+              <Icon src={ArchiveBox} class="w-4 h-4 flex-shrink-0 text-blue-600" />
               <span>{year.name}</span>
             </button>
             {#if expanded}

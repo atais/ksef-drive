@@ -1,18 +1,19 @@
 # Project: ksef-gdrive
 
-A React app integrating KSeF (Polish e-invoicing system) with Google Drive.
+A Svelte app integrating KSeF (Polish e-invoicing system) with Google Drive.
 
 ## Stack
-- **Vite** + **React 19** + **TypeScript**
-- **Tailwind CSS v3** (via PostCSS)
+- **Vite** + **Svelte 5** + **TypeScript**
+- **Tailwind CSS v4** (via PostCSS)
+- **svelte-hero-icons** for icons — use `<Icon src={IconName} class="..." />`, don't hand-write `<svg>` paths
 - No routing library — single-page app with sidebar navigation
 
 ## Project structure
 - `src/ksef/` — KSeF API service
 - `src/gdrive/` — Google Drive service
-- `src/App.tsx` — main app shell
-- `src/Settings.tsx`, `src/Sidebar.tsx`, `src/Header.tsx` — UI layout
-- `src/Invoices.tsx`, `src/KsefSetup.tsx`, `src/EntityRolesStatus.tsx` — feature components
+- `src/App.svelte` — main app shell
+- `src/Sidebar.svelte`, `src/Header.svelte` — UI layout
+- `src/Invoices.svelte`, `src/KsefCredentialsForm.svelte` — feature components
 
 ## Dev commands
 ```

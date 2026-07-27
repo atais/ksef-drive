@@ -448,6 +448,47 @@ export async function queryInvoicesMetadata(
   return await response.json()
 }
 
+export const ALL_SUBJECT_TYPES: InvoiceQuerySubjectType[] = ['Subject1', 'Subject2', 'Subject3', 'SubjectAuthorized']
+
+// Fetches every page of a single subject type's query, following hasMore.
+async function queryAllPagesForSubject(
+  sessionToken: string,
+  subjectType: InvoiceQuerySubjectType,
+  dateRange: InvoiceQueryDateRange
+): Promise<InvoiceMetadata[]> {
+  const invoices: InvoiceMetadata[] = []
+  let pageOffset = 0
+  const pageSize = 100
+
+  while (true) {
+    const result = await queryInvoicesMetadata(sessionToken, { subjectType, dateRange }, { pageOffset, pageSize })
+    invoices.push(...result.invoices)
+    if (!result.hasMore || result.invoices.length === 0) break
+    pageOffset += pageSize
+  }
+
+  return invoices
+}
+
+// Queries invoice metadata across every subject role (seller, buyer, etc.),
+// fully paginated, and merges by ksefNumber. Used by the sync flow so the
+// local DB always reflects the complete KSEF state for a date range.
+export async function queryAllInvoicesMetadata(
+  sessionToken: string,
+  dateRange: InvoiceQueryDateRange
+): Promise<InvoiceMetadata[]> {
+  const results = await Promise.all(
+    ALL_SUBJECT_TYPES.map((subjectType) => queryAllPagesForSubject(sessionToken, subjectType, dateRange))
+  )
+  const merged = new Map<string, InvoiceMetadata>()
+  for (const invoices of results) {
+    for (const invoice of invoices) {
+      merged.set(invoice.ksefNumber, invoice)
+    }
+  }
+  return Array.from(merged.values())
+}
+
 // Downloads a single invoice's XML content by its KSEF number ("Pobranie faktury po numerze KSeF").
 export async function downloadInvoiceXml(sessionToken: string, ksefNumber: string): Promise<string> {
   const response = await fetch(`${KSEF_API}/invoices/ksef/${ksefNumber}`, {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Icon, Bars3, ArrowPath } from 'svelte-hero-icons'
+
   interface Props {
     user: { email: string; name: string } | null
     onLogout: () => void
@@ -22,9 +24,7 @@
   <div class="flex h-16">
     <div class="flex items-center gap-3 px-4 sm:px-6 w-full md:w-64 flex-shrink-0 border-r border-gray-200">
       <button onclick={onToggleSidebar} class="p-2 md:hidden text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Toggle sidebar">
-        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
-        </svg>
+        <Icon src={Bars3} class="w-6 h-6" />
       </button>
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
@@ -50,9 +50,7 @@
     {#if user}
       <div class="flex items-center gap-4 px-4 sm:px-6 flex-shrink-0">
         <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500" title={driveSyncing ? 'Syncing with Google Drive' : 'Google Drive up to date'}>
-          <svg class="w-3.5 h-3.5 {driveSyncing ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
+          <Icon src={ArrowPath} class="w-3.5 h-3.5 {driveSyncing ? 'animate-spin' : ''}" />
           <span>{driveSyncing ? 'Syncing Drive...' : 'Drive synced'}</span>
         </div>
         <div class="hidden sm:flex items-center gap-3">

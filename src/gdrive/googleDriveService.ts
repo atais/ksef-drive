@@ -387,6 +387,29 @@ export async function saveTextFileToFolder(
   }
 }
 
+// Deletes a named file from the given Drive folder, if present.
+export async function deleteFileFromFolder(accessToken: string, folderId: string, filename: string): Promise<void> {
+  const existing = await searchFile(accessToken, filename, folderId)
+  if (existing) {
+    await deleteFile(accessToken, existing.id)
+  }
+}
+
+// Moves a named file from one Drive folder to another, if present in the
+// source folder. No-op if the file isn't there (e.g. it was never filed).
+export async function moveFileBetweenFolders(
+  accessToken: string,
+  fromFolderId: string,
+  toFolderId: string,
+  filename: string
+): Promise<void> {
+  if (fromFolderId === toFolderId) return
+  const existing = await searchFile(accessToken, filename, fromFolderId)
+  if (existing) {
+    await moveFile(accessToken, existing.id, fromFolderId, toFolderId)
+  }
+}
+
 export async function deleteJsonFromConfig(
   accessToken: string,
   configFolderId: string,
