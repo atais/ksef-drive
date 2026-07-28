@@ -9,11 +9,19 @@ A Svelte app integrating KSeF (Polish e-invoicing system) with Google Drive.
 - No routing library — single-page app with sidebar navigation
 
 ## Project structure
-- `src/ksef/` — KSeF API service
-- `src/gdrive/` — Google Drive service
-- `src/App.svelte` — main app shell
-- `src/Sidebar.svelte`, `src/Header.svelte` — UI layout
-- `src/Invoices.svelte`, `src/KsefCredentialsForm.svelte` — feature components
+Three layers. `gdrive` and `ksef` are peers that must not import each other —
+`app` is the only place that knows about both.
+
+- `src/ksef/` — KSeF only: auth, invoice queries, XML parsing
+- `src/gdrive/` — Google Drive only: OAuth (`googleAuth.ts`) + Drive API
+- `src/app/` — all app logic: session, navigation, filing rules, page stores.
+  `.svelte.ts` files hold runes-based state classes, plain `.ts` holds pure logic.
+- `src/*.svelte` — markup and wiring only, no business logic
+
+Components read shared state from the `app/` singletons (`session`,
+`navigation`, `filesStore`, `folderTree`) rather than threading props.
+Per-page state (`InvoicesStore`, `InvoicePreview`, `CredentialsForm`) is
+instantiated by the component that owns it.
 
 ## Dev commands
 ```
