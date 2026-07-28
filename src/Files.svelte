@@ -22,19 +22,6 @@
 </script>
 
 <div class="space-y-6">
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-    <h2 class="text-3xl font-bold text-gray-900">Files</h2>
-    <button
-      type="button"
-      onclick={refresh}
-      disabled={filesStore.loading}
-      class="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-600/30"
-    >
-      <Icon src={ArrowPath} class="w-5 h-5 mr-2 {filesStore.loading ? 'animate-spin' : ''}" />
-      {filesStore.loading ? 'Loading...' : 'Refresh Files'}
-    </button>
-  </div>
-
   {#if !navigation.selectedFolderId}
     <div class="text-center py-12">
       <Icon src={Document} class="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -51,7 +38,7 @@
   {:else}
     <div class="space-y-6">
       {#each filesStore.sections as section (section.key)}
-        <div class="bg-white rounded-xl border border-gray-200 p-8">
+        <div class="bg-white rounded-xl">
           <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.title}</h3>
           {#if section.files.length === 0}
             <p class="text-sm text-gray-400">No files</p>

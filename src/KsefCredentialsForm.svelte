@@ -36,7 +36,7 @@
   }
 </script>
 
-<div class="bg-white rounded-xl border border-gray-200 p-8">
+<div class="bg-white rounded-xl lg:max-w-2xl">
   <div class="mb-6">
     <h2 class="text-3xl font-bold text-gray-900 mb-2">
       {form.isEdit ? 'KSEF Settings' : 'KSEF Configuration'}

@@ -44,3 +44,18 @@ export function monthOptionsForKey(key: string): string[] {
   const year = parseMonthKey(key)?.year ?? String(new Date().getFullYear())
   return Array.from({ length: 12 }, (_, i) => monthKey(i + 1, year))
 }
+
+// Month options for -1 to +3 months around an issue date.
+export function monthOptionsForDate(dateStr: string): string[] {
+  const date = new Date(dateStr)
+  const options: string[] = []
+
+  // Start from -1 month
+  for (let i = -1; i <= 3; i++) {
+    const optDate = new Date(date)
+    optDate.setMonth(optDate.getMonth() + i)
+    options.push(monthKeyOf(optDate))
+  }
+
+  return options
+}

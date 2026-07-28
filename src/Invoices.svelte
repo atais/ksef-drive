@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
-  import { downloadInvoiceXml, type InvoiceQueryDateType } from './ksef/invoiceApi'
-  import { monthOptionsForKey } from './app/dates'
+  import { downloadInvoiceXml } from './ksef/invoiceApi'
+  import { monthOptionsForDate } from './app/dates'
   import { categoryForRole } from './app/invoiceFiling'
   import { InvoicePreview } from './app/invoicePreview.svelte'
   import { InvoicesStore, STATUS_FILTERS, type StatusFilter } from './app/invoicesStore.svelte'
@@ -11,24 +11,12 @@
   const store = new InvoicesStore()
   const preview = new InvoicePreview((ksefNumber) => downloadInvoiceXml(session.ksefSessionToken!, ksefNumber))
 
+  store.dateType = 'Invoicing'
   store.load()
 </script>
 
-<div class="bg-white rounded-xl border border-gray-200 p-8">
+<div class="bg-white rounded-xl">
   <div class="flex flex-wrap gap-4 mb-6 items-end">
-    <div>
-      <label for="dateType" class="block text-xs font-semibold text-gray-600 mb-1">Date type</label>
-      <select
-        id="dateType"
-        value={store.dateType}
-        onchange={(e) => (store.dateType = (e.target as HTMLSelectElement).value as InvoiceQueryDateType)}
-        class="px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-900"
-      >
-        <option value="Issue">Issue date</option>
-        <option value="Invoicing">Invoicing date</option>
-        <option value="PermanentStorage">Permanent storage date</option>
-      </select>
-    </div>
     <div>
       <label for="from" class="block text-xs font-semibold text-gray-600 mb-1">From</label>
       <input
@@ -91,13 +79,11 @@
         <thead>
           <tr class="border-b border-gray-200">
             <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Issue Date</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Invoice Number</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Seller</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Buyer</th>
+            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Entity</th>
             <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Gross</th>
             <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">VAT</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Filing</th>
             <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Preview</th>
+            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
             <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">
               {store.statusFilter === 'added' ? 'Remove' : 'Approve'}
             </th>
@@ -110,16 +96,30 @@
           {#each store.invoices as invoice (invoice.ksefNumber)}
             {@const entry = store.db[invoice.ksefNumber]}
             {@const isSaving = store.savingKsefNumber === invoice.ksefNumber}
+            {@const counterparty = entry.role === 'seller'
+              ? invoice.buyer?.name ?? invoice.buyer?.identifier?.value
+              : invoice.seller?.name ?? invoice.seller?.nip}
             <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
               <td class="py-4 px-4 text-sm text-gray-600">{invoice.issueDate}</td>
-              <td class="py-4 px-4 text-sm text-gray-900">{invoice.invoiceNumber}</td>
-              <td class="py-4 px-4 text-sm text-gray-900">{invoice.seller?.name || invoice.seller?.nip}</td>
-              <td class="py-4 px-4 text-sm text-gray-900">{invoice.buyer?.name || invoice.buyer?.identifier?.value}</td>
+              <td class="py-4 px-4 text-sm text-gray-900">{counterparty}</td>
               <td class="py-4 px-4 text-sm text-right text-gray-900">
                 {invoice.grossAmount.toFixed(2)} {invoice.currency}
               </td>
               <td class="py-4 px-4 text-sm text-right text-gray-900">
                 {invoice.vatAmount.toFixed(2)} {invoice.currency}
+              </td>
+              <td class="py-4 px-4">
+                <div class="flex items-center justify-center">
+                  <button
+                    type="button"
+                    onclick={() => preview.open(invoice.ksefNumber)}
+                    title="Preview invoice"
+                    aria-label="Preview invoice"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
+                  </button>
+                </div>
               </td>
               <td class="py-4 px-4">
                 <div class="flex items-center gap-2">
@@ -134,23 +134,10 @@
                     onchange={(e) => store.setMonth(invoice.ksefNumber, (e.target as HTMLSelectElement).value)}
                     class="px-2 py-1 text-xs rounded-lg border border-gray-300 bg-white text-gray-900"
                   >
-                    {#each monthOptionsForKey(entry.monthKey) as option (option)}
+                    {#each monthOptionsForDate(invoice.issueDate) as option (option)}
                       <option value={option}>{option}</option>
                     {/each}
                   </select>
-                </div>
-              </td>
-              <td class="py-4 px-4">
-                <div class="flex items-center justify-center">
-                  <button
-                    type="button"
-                    onclick={() => preview.open(invoice.ksefNumber)}
-                    title="Preview invoice"
-                    aria-label="Preview invoice"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
-                  >
-                    <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
-                  </button>
                 </div>
               </td>
               <td class="py-4 px-4">
