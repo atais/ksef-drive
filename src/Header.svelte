@@ -17,10 +17,9 @@
         <Icon src={Bars3} class="w-6 h-6" />
       </button>
       <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center flex-shrink-0">
-          <span class="text-white font-bold text-sm">K</span>
-        </div>
-        <span class="font-bold text-lg text-gray-900 hidden sm:inline">KSEF</span>
+        <img src="{import.meta.env.BASE_URL}ksef.jpg" alt="KSEF" class="w-8 h-8 object-cover flex-shrink-0" />
+        <img src="{import.meta.env.BASE_URL}drive.png" alt="Google Drive" class="w-8 h-8 object-contain flex-shrink-0" />
+        <span class="font-bold text-lg text-gray-900 hidden sm:inline">KSEF drive</span>
       </div>
     </div>
 

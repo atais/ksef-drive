@@ -65,8 +65,11 @@
   {/if}
 
   {#if store.loadingDb}
-    <div class="text-center py-12">
-      <p class="text-gray-600 font-medium">Loading invoices...</p>
+    <div class="flex items-center justify-center py-20">
+      <div class="text-center">
+        <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+        <p class="text-gray-600 font-medium">Loading invoices...</p>
+      </div>
     </div>
   {:else if store.invoices.length === 0}
     <div class="text-center py-12">
