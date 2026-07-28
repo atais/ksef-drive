@@ -3,6 +3,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/ksef-gdrive/',
   plugins: [svelte()],
   server: {
     headers: {

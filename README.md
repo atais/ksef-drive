@@ -1,75 +1,104 @@
-# React + TypeScript + Vite
+# KSeF + Google Drive Integration
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Svelte app integrating [KSeF](https://www.podatki.gov.pl/ksef/) (Polish e-invoicing system) with Google Drive.
 
-Currently, two official plugins are available:
+**Live:** https://atais.github.io/ksef-gdrive/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- **Vite** + **Svelte 5** + **TypeScript**
+- **Tailwind CSS v4** (via PostCSS)
+- **Google Identity Services** for OAuth
+- **svelte-hero-icons** for UI icons
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Setup
 
-## Expanding the ESLint configuration
+### Local Development
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. **Clone & install**
+   ```bash
+   git clone https://github.com/atais/ksef-gdrive
+   cd ksef-gdrive
+   npm install
+   ```
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+2. **Create `.env.local`** (copy from `.env.example`)
+   ```bash
+   cp .env.example .env.local
+   ```
+   Add your Google OAuth Client ID:
+   ```
+   VITE_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+3. **Run dev server**
+   ```bash
+   npm run dev
+   ```
+   Opens at http://localhost:5173/ksef-gdrive/
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Build & Preview
 
+```bash
+npm run build       # Produces /dist folder
+npm run preview     # Preview production build locally
+npm run lint        # Run ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Deployment to GitHub Pages
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### 1. Add Google OAuth Redirect URI
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Go to [Google Cloud Console](https://console.cloud.google.com/):
+1. Select your project
+2. APIs & Services → Credentials
+3. Click your OAuth 2.0 Client ID
+4. Add Authorized redirect URIs:
+   ```
+   https://atais.github.io/ksef-gdrive/
+   ```
 
-```
+### 2. Add GitHub Secret
+
+1. Go to repo Settings → Secrets and variables → Actions
+2. Create new repository secret:
+   - Name: `VITE_GOOGLE_CLIENT_ID`
+   - Value: Your Google Client ID (same as `.env.local`)
+
+### 3. Enable GitHub Pages
+
+1. Go to repo Settings → Pages
+2. Source: **Deploy from a branch**
+3. Branch: **master** | Folder: **/root**
+
+GitHub Actions will auto-deploy on every push to master.
+
+## Architecture
+
+Three isolated layers (peers don't import each other):
+
+- **`src/ksef/`** — KSeF auth, invoice queries, XML parsing
+- **`src/gdrive/`** — Google Drive OAuth, Drive API
+- **`src/app/`** — Session, navigation, filing rules, shared state stores
+- **`src/*.svelte`** — UI markup only, no business logic
+
+Components read state from `app/` singletons (`session`, `navigation`, `filesStore`, `folderTree`).
+
+## Google OAuth Setup (First-Time)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create new project
+3. Enable APIs:
+   - Google Drive API
+   - (Optional) Google Identity Services (auto-enabled)
+4. Create OAuth 2.0 Client ID:
+   - Application type: **Web application**
+   - Authorized JavaScript origins: `http://localhost:5173`, `https://atais.github.io`
+   - Authorized redirect URIs: `https://atais.github.io/ksef-gdrive/`
+5. Download JSON credentials → rename to `.env.local`, extract `VITE_GOOGLE_CLIENT_ID`
+
+## Known Limitations
+
+- Single-page app, no routing library (sidebar navigation)
+- Client-side OAuth only (no backend service)
+- KSeF requires Polish tax ID + credentials
