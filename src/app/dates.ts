@@ -50,9 +50,13 @@ export function monthOptionsForDate(dateStr: string): string[] {
   const date = new Date(dateStr)
   const options: string[] = []
 
+  // Pin to the 1st so month arithmetic can't roll over into the next month
+  // when the source day doesn't exist in the target month (e.g. the 31st).
+  const base = new Date(date.getFullYear(), date.getMonth(), 1)
+
   // Start from -1 month
   for (let i = -1; i <= 3; i++) {
-    const optDate = new Date(date)
+    const optDate = new Date(base)
     optDate.setMonth(optDate.getMonth() + i)
     options.push(monthKeyOf(optDate))
   }

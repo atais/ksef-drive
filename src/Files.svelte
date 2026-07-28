@@ -15,10 +15,6 @@
     if (!folderId) return
     return filesStore.load(folderId)
   })
-
-  function refresh() {
-    if (navigation.selectedFolderId) filesStore.load(navigation.selectedFolderId)
-  }
 </script>
 
 <div class="space-y-6">

@@ -17,8 +17,8 @@
         <Icon src={Bars3} class="w-6 h-6" />
       </button>
       <div class="flex items-center gap-2">
-        <img src="{import.meta.env.BASE_URL}ksef.jpg" alt="KSEF" class="w-8 h-8 object-cover flex-shrink-0" />
-        <img src="{import.meta.env.BASE_URL}drive.png" alt="Google Drive" class="w-8 h-8 object-contain flex-shrink-0" />
+        <img src="{import.meta.env.BASE_URL}ksef.jpg" alt="KSEF" class="w-8 h-8" />
+        <img src="{import.meta.env.BASE_URL}drive.png" alt="Google Drive" class="w-8 h-8" />
         <span class="font-bold text-lg text-gray-900 hidden sm:inline">KSEF drive</span>
       </div>
     </div>
