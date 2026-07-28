@@ -1,7 +1,8 @@
 // Shared transport for the KSeF v2 API. In dev the requests go through the
-// Vite proxy to dodge CORS; in production they hit KSeF directly.
+// Vite proxy to dodge CORS; in production KSeF's API sends no CORS headers,
+// so requests go through a Cloudflare Worker proxy instead (see worker/).
 
-const KSEF_API = import.meta.env.DEV ? '/api/ksef' : 'https://api.ksef.mf.gov.pl/v2'
+const KSEF_API = import.meta.env.DEV ? '/api/ksef' : import.meta.env.VITE_KSEF_API_BASE
 
 export interface KsefRequest extends RequestInit {
   // Bearer token, when the endpoint needs one. Some endpoints take the
