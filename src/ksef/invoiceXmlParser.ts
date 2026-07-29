@@ -77,15 +77,26 @@ export function parseInvoiceXml(xml: string): ParsedInvoice {
   const rachunek = platnosc?.getElementsByTagName('RachunekBankowy')[0]
   const termin = platnosc?.getElementsByTagName('TerminPlatnosci')[0]
 
-  const lines: ParsedInvoiceLine[] = Array.from(fa?.getElementsByTagName('FaWiersz') ?? []).map((wiersz) => ({
-    lp: text(wiersz, 'NrWierszaFa') ?? '',
-    name: text(wiersz, 'P_7') ?? '',
-    unit: text(wiersz, 'P_8A') ?? '',
-    quantity: text(wiersz, 'P_8B') ?? '',
-    unitPrice: text(wiersz, 'P_9A') ?? '',
-    netAmount: text(wiersz, 'P_11') ?? '',
-    vatRate: text(wiersz, 'P_12') ?? '',
-  }))
+  const faWiersze = Array.from(fa?.getElementsByTagName('FaWiersz') ?? [])
+  const lines: ParsedInvoiceLine[] = faWiersze.length
+    ? faWiersze.map((wiersz) => ({
+        lp: text(wiersz, 'NrWierszaFa') ?? '',
+        name: text(wiersz, 'P_7') ?? '',
+        unit: text(wiersz, 'P_8A') ?? '',
+        quantity: text(wiersz, 'P_8B') ?? '',
+        unitPrice: text(wiersz, 'P_9A') ?? '',
+        netAmount: text(wiersz, 'P_11') ?? '',
+        vatRate: text(wiersz, 'P_12') ?? '',
+      }))
+    : Array.from(fa?.getElementsByTagName('ZamowienieWiersz') ?? []).map((wiersz) => ({
+        lp: text(wiersz, 'NrWierszaZam') ?? '',
+        name: text(wiersz, 'P_7Z') ?? '',
+        unit: text(wiersz, 'P_8AZ') ?? '',
+        quantity: text(wiersz, 'P_8BZ') ?? '',
+        unitPrice: text(wiersz, 'P_9AZ') ?? '',
+        netAmount: text(wiersz, 'P_11NettoZ') ?? '',
+        vatRate: text(wiersz, 'P_12Z') ?? '',
+      }))
 
   return {
     formCode: text(naglowek, 'KodFormularza'),

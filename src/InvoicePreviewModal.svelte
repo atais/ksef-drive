@@ -16,25 +16,28 @@
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose()
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') onClose()
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
   onclick={handleBackdropClick}
   role="presentation"
 >
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
-      <h2 class="text-lg font-semibold text-gray-900">Invoice preview</h2>
-      <button
-        type="button"
-        onclick={onClose}
-        aria-label="Close"
-        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-all"
-      >
-        <Icon src={XMark} class="w-5 h-5" />
-      </button>
-    </div>
+  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+    <button
+      type="button"
+      onclick={onClose}
+      aria-label="Close"
+      class="absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-all"
+    >
+      <Icon src={XMark} class="w-5 h-5" />
+    </button>
 
     <div class="p-6">
       {#if loading}
@@ -42,10 +45,10 @@
       {:else if error}
         <p class="text-red-700 text-sm text-center py-8">{error}</p>
       {:else if invoice}
-        <div class="text-center mb-6">
+        <div class="text-center mb-4">
           <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Faktura {invoice.formCode ?? ''}</p>
-          <p class="text-xl font-bold text-gray-900">{invoice.invoiceNumber}</p>
-          <p class="text-sm text-gray-500">
+          <p class="text-lg font-bold text-gray-900">{invoice.invoiceNumber}</p>
+          <p class="text-xs text-gray-500">
             Issued {invoice.issueDate ?? '-'}{invoice.placeOfIssue ? `, ${invoice.placeOfIssue}` : ''}
           </p>
         </div>
