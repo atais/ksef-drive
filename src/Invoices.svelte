@@ -2,7 +2,6 @@
   import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
   import { downloadInvoiceXml } from './ksef/invoiceApi'
   import { monthOptionsForDate } from './app/dates'
-  import { categoryForRole } from './app/invoiceFiling'
   import { InvoicePreview } from './app/invoicePreview.svelte'
   import { InvoicesStore, STATUS_FILTERS, type StatusFilter } from './app/invoicesStore.svelte'
   import { session } from './app/session.svelte'
@@ -99,9 +98,12 @@
           {#each store.invoices as invoice (invoice.ksefNumber)}
             {@const entry = store.db[invoice.ksefNumber]}
             {@const isSaving = store.savingKsefNumber === invoice.ksefNumber}
-            {@const counterparty = entry.role === 'seller'
+            {@const role = store.roleOf(entry)}
+            {@const counterparty = role === 'seller'
               ? invoice.buyer?.name ?? invoice.buyer?.identifier?.value
               : invoice.seller?.name ?? invoice.seller?.nip}
+            {@const options = store.categoryOptions(entry)}
+            {@const category = store.categoryFor(entry)}
             <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
               <td class="py-4 px-4 text-sm text-gray-600">{invoice.issueDate}</td>
               <td class="py-4 px-4 text-sm text-gray-900">{counterparty}</td>
@@ -126,12 +128,25 @@
               </td>
               <td class="py-4 px-4">
                 <div class="flex items-center gap-2">
-                  <span
-                    class="px-2 py-0.5 text-xs font-semibold rounded-full {entry.role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
-                    title={`Filed to ${categoryForRole(entry.role)}`}
-                  >
-                    {categoryForRole(entry.role)}
-                  </span>
+                  {#if options.length > 1}
+                    <select
+                      value={category}
+                      onchange={(e) => store.setCategory(invoice.ksefNumber, (e.target as HTMLSelectElement).value)}
+                      title="Filing category"
+                      class="px-2 py-1 text-xs font-semibold rounded-lg border {role === 'seller' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}"
+                    >
+                      {#each options as option (option.key)}
+                        <option value={option.key}>{option.key}</option>
+                      {/each}
+                    </select>
+                  {:else}
+                    <span
+                      class="px-2 py-0.5 text-xs font-semibold rounded-full {role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
+                      title={`Filed to ${category}`}
+                    >
+                      {category}
+                    </span>
+                  {/if}
                   <select
                     value={entry.monthKey}
                     onchange={(e) => store.setMonth(invoice.ksefNumber, (e.target as HTMLSelectElement).value)}

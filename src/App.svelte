@@ -4,7 +4,7 @@
   import { session } from './app/session.svelte'
   import Header from './Header.svelte'
   import Sidebar from './Sidebar.svelte'
-  import KsefCredentialsForm from './KsefCredentialsForm.svelte'
+  import Settings from './Settings.svelte'
   import Invoices from './Invoices.svelte'
   import Files from './Files.svelte'
 
@@ -51,7 +51,7 @@
         {:else}
           <div class="min-h-[calc(100vh-64px)] p-4 sm:p-8">
             {#if navigation.view === 'settings' || !session.ksefCredentials}
-              <KsefCredentialsForm currentCredentials={session.ksefCredentials} />
+              <Settings />
             {:else if navigation.view === 'files'}
               <Files />
             {:else if session.ksefSessionToken}

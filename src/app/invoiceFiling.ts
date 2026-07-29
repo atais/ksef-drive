@@ -5,7 +5,7 @@
 import { deleteFileByName, moveFileByName, putTextFile } from '../gdrive/driveApi'
 import { downloadInvoiceXml, type InvoiceMetadata } from '../ksef/invoiceApi'
 import { sameNip } from '../ksef/nip'
-import { ensureCategoryFolder, type InvoiceCategory } from './archive'
+import { ensureCategoryFolder } from './archive'
 import { monthKeyOf, parseMonthKey } from './dates'
 
 export type InvoiceRole = 'seller' | 'buyer'
@@ -13,17 +13,15 @@ export type InvoiceRole = 'seller' | 'buyer'
 export interface FilingTarget {
   rootFolderId: string
   monthKey: string
-  role: InvoiceRole
+  // Folder name of the category the invoice files into. Which categories are
+  // offered for a given role is categories.ts's call, not this module's.
+  category: string
 }
 
-// Am I the seller or the buyer on this invoice? Seller invoices are sales
-// (_Sprzedaz), everything else is treated as a cost (_Koszty).
+// Am I the seller or the buyer on this invoice? Seller invoices are sales,
+// everything else is treated as a cost.
 export function invoiceRole(invoice: InvoiceMetadata, userNip: string): InvoiceRole {
   return sameNip(userNip, invoice.seller?.nip) ? 'seller' : 'buyer'
-}
-
-export function categoryForRole(role: InvoiceRole): InvoiceCategory {
-  return role === 'seller' ? '_Sprzedaz' : '_Koszty'
 }
 
 // Default month bucket for an invoice, from its issue date. Falls back to the
@@ -52,7 +50,7 @@ function resolveFilingFolder(accessToken: string, target: FilingTarget): Promise
     target.rootFolderId,
     parsed.year,
     parsed.month,
-    categoryForRole(target.role)
+    target.category
   )
 }
 
@@ -74,8 +72,8 @@ export async function unfileInvoice(accessToken: string, ksefNumber: string, tar
   await deleteFileByName(accessToken, folderId, invoiceFilename(ksefNumber))
 }
 
-// Moves an already-filed invoice between month buckets. Without this the old
-// copy would be orphaned in the previous month's folder.
+// Moves an already-filed invoice between slots. Without this the old copy
+// would be orphaned in the previous month or category folder.
 export async function refileInvoice(
   accessToken: string,
   ksefNumber: string,

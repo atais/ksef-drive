@@ -1,9 +1,9 @@
 <script lang="ts">
   import { Icon, ArrowPath, Document, Trash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
   import { downloadFileText } from './gdrive/driveApi'
+  import { categoriesStore } from './app/categoriesStore.svelte'
   import { filesStore } from './app/filesStore.svelte'
   import { InvoicePreview } from './app/invoicePreview.svelte'
-  import { isInvoiceCategory } from './app/archive'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
   import InvoicePreviewModal from './InvoicePreviewModal.svelte'
@@ -12,6 +12,9 @@
 
   $effect(() => {
     const folderId = navigation.selectedFolderId
+    // Read the category list so editing categories in Settings re-lists the
+    // month: the sections are one per category.
+    categoriesStore.categories
     if (!folderId) return
     return filesStore.load(folderId)
   })
@@ -33,13 +36,13 @@
     </div>
   {:else}
     <div class="space-y-6">
-      {#each filesStore.sections as section (section.key)}
+      {#each filesStore.sections as section (section.category.key)}
         <div class="bg-white rounded-xl">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.title}</h3>
+          <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.category.key}</h3>
           {#if section.files.length === 0}
             <p class="text-sm text-gray-400">No files</p>
-          {:else if isInvoiceCategory(section.key)}
-            {@const isSales = section.key === '_Sprzedaz'}
+          {:else if section.category.kind !== 'other'}
+            {@const isSales = section.category.kind === 'sold'}
             <div class="overflow-x-auto">
               <table class="w-full table-fixed">
                 <colgroup>

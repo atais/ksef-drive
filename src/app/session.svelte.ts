@@ -10,6 +10,7 @@ import { requestGoogleAccessToken } from '../gdrive/googleAuth'
 import { deleteFileByName, readJsonFile, writeJsonFile } from '../gdrive/driveApi'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
+import { categoriesStore } from './categoriesStore.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
@@ -80,12 +81,16 @@ export class Session {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
   }
 
-  // Resolves the archive root (an idempotent lookup) and kicks off the
-  // month-folder backfill without blocking on a dozen Drive round-trips.
+  // Resolves the archive root and its .config folder (both idempotent
+  // lookups), loads the category list, then kicks off the month-folder
+  // backfill without blocking on a dozen Drive round-trips. Categories have
+  // to be known first — they're what the backfill creates inside each month.
   private async openArchive(token: string): Promise<string> {
     const root = await ensureArchiveRoot(token)
     this.rootFolderId = root.id
-    this.runInBackground(() => ensureYearFolders(token, root.id))
+    this.configFolderId = await ensureConfigFolder(token, root.id)
+    await categoriesStore.load(token, this.configFolderId)
+    this.runInBackground(() => ensureYearFolders(token, root.id, categoriesStore.names))
     return root.id
   }
 
@@ -130,9 +135,8 @@ export class Session {
       const userInfo = await axios.get(USERINFO_URL, { headers: { Authorization: `Bearer ${token}` } })
       this.user = { email: userInfo.data.email, name: userInfo.data.name }
 
-      const rootFolderId = await this.openArchive(token)
-      this.configFolderId = await ensureConfigFolder(token, rootFolderId)
-      this.ksefCredentials = await this.loadKsefCredentials(token, this.configFolderId)
+      await this.openArchive(token)
+      this.ksefCredentials = await this.loadKsefCredentials(token, this.configFolderId!)
       this.persist()
 
       if (this.ksefCredentials) void this.authenticateKsef(this.ksefCredentials)

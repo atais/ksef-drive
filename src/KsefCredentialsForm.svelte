@@ -36,16 +36,19 @@
   }
 </script>
 
-<div class="bg-white rounded-xl lg:max-w-2xl">
+<div class="bg-white rounded-xl">
   <div class="mb-6">
     <h2 class="text-3xl font-bold text-gray-900 mb-2">
-      {form.isEdit ? 'KSEF Settings' : 'KSEF Configuration'}
+      KSEF Settings
     </h2>
-    <p class="text-gray-600">
-      {form.isEdit
-        ? 'Update your KSEF certificate connection details.'
-        : 'Connect to Polish KSEF system using a qualified certificate.'}
-    </p>
+    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <p class="text-sm text-blue-600">
+        Credentials are stored in your Google Drive .config folder.
+        The private key is only used client-side in your browser to sign the KSEF
+        authentication request — it is never sent to any server except KSEF itself
+        embedded in the signed XML. Only RSA keys are currently supported.
+      </p>
+    </div>
   </div>
 
   <form onsubmit={handleSubmit} class="space-y-6">
@@ -130,15 +133,6 @@
       {/if}
     </button>
   </form>
-
-  <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-    <p class="text-sm text-blue-600">
-      <strong>Note:</strong> Credentials are stored in your Google Drive .config folder.
-      The private key is only used client-side in your browser to sign the KSEF
-      authentication request — it is never sent to any server except KSEF itself
-      embedded in the signed XML. Only RSA keys are currently supported.
-    </p>
-  </div>
 
   {#if !form.isEdit}
     <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">

@@ -5,6 +5,7 @@
 import { deleteFile } from '../gdrive/driveApi'
 import { listMonthCategories, type CategorySection } from './archive'
 import { cancellable } from './cancellable'
+import { categoriesStore } from './categoriesStore.svelte'
 import { ksefNumberFromFilename } from './invoiceFiling'
 import { loadInvoicesDb, saveInvoicesDb, type InvoicesDb } from './invoicesDb'
 import { session } from './session.svelte'
@@ -32,7 +33,7 @@ export class FilesStore {
 
     return cancellable(
       Promise.all([
-        listMonthCategories(accessToken, folderId),
+        listMonthCategories(accessToken, folderId, categoriesStore.categories),
         configFolderId ? loadInvoicesDb(accessToken, configFolderId) : Promise.resolve(this.db),
       ]),
       {
