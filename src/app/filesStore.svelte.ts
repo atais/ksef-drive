@@ -34,7 +34,7 @@ export class FilesStore {
     return cancellable(
       Promise.all([
         listMonthCategories(accessToken, folderId, categoriesStore.categories),
-        configFolderId ? loadInvoicesDb(accessToken, configFolderId) : Promise.resolve(this.db),
+        configFolderId ? loadInvoicesDb(accessToken, configFolderId, session.ksefCredentials?.nip ?? '') : Promise.resolve(this.db),
       ]),
       {
         onResult: ([sections, db]) => {
