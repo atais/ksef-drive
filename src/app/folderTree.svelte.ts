@@ -2,7 +2,6 @@
 // expanded.
 
 import { listYearMonthTree, type YearFolder } from './archive'
-import { cancellable } from './cancellable'
 import { session } from './session.svelte'
 
 export class FolderTree {
@@ -26,16 +25,21 @@ export class FolderTree {
     const { accessToken, rootFolderId } = session
     if (!accessToken || !rootFolderId) return () => {}
 
-    return cancellable(listYearMonthTree(accessToken, rootFolderId), {
-      onResult: (tree) => {
+    let cancelled = false
+    listYearMonthTree(accessToken, rootFolderId)
+      .then((tree) => {
+        if (cancelled) return
         this.years = tree
         // Open the most recent year on first load, but never fight a user
         // who has already collapsed everything.
         if (this.expanded.size === 0 && tree.length > 0) this.expanded = new Set([tree[0].id])
-      },
-      onError: (error) => console.error('Failed to load folder tree:', error),
-      onSettled: () => (this.loading = false),
-    })
+      })
+      .catch((error) => console.error('Failed to load folder tree:', error))
+      .finally(() => {
+        if (!cancelled) this.loading = false
+      })
+
+    return () => (cancelled = true)
   }
 }
 

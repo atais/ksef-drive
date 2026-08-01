@@ -19,14 +19,11 @@ class ConfirmDialog {
   request = $state<ConfirmRequest | null>(null)
   private resolve: ((answer: boolean) => void) | null = null
 
-  readonly isOpen = $derived(this.request !== null)
-  readonly details = $derived(this.request?.details?.filter(Boolean) ?? [])
-
   ask(request: ConfirmRequest): Promise<boolean> {
     // A second question while one is open would strand the first promise, so
     // the outgoing one is answered "no" before it's replaced.
     this.answer(false)
-    this.request = request
+    this.request = { ...request, details: request.details?.filter(Boolean) }
     return new Promise((resolve) => (this.resolve = resolve))
   }
 

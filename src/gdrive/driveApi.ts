@@ -42,18 +42,13 @@ const isNotFolder = `mimeType!=${quote(FOLDER_MIME)}`
 
 // The single entry point for "find files matching this query". Every listing
 // helper below is just a different set of clauses.
-export async function queryFiles(
-  accessToken: string,
-  clauses: string[],
-  { orderBy, pageSize = 1000 }: { orderBy?: string; pageSize?: number } = {}
-): Promise<DriveFile[]> {
+export async function queryFiles(accessToken: string, clauses: string[]): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     q: clauses.join(' and '),
     spaces: 'drive',
     fields: 'files(id,name)',
-    pageSize: String(pageSize),
+    pageSize: '1000',
   })
-  if (orderBy) params.set('orderBy', orderBy)
 
   const response = await driveFetch(accessToken, `${DRIVE_API}/files?${params}`)
   const data = await response.json()
@@ -68,16 +63,12 @@ export function listFilesOnly(accessToken: string, parentId: string): Promise<Dr
   return queryFiles(accessToken, [inParent(parentId), isNotFolder, NOT_TRASHED])
 }
 
-export function listChildren(accessToken: string, parentId: string): Promise<DriveFile[]> {
-  return queryFiles(accessToken, [inParent(parentId), NOT_TRASHED])
-}
-
 export async function findFile(accessToken: string, folderId: string, filename: string): Promise<DriveFile | null> {
-  const files = await queryFiles(accessToken, [named(filename), inParent(folderId), NOT_TRASHED], { pageSize: 1 })
+  const files = await queryFiles(accessToken, [named(filename), inParent(folderId), NOT_TRASHED])
   return files[0] ?? null
 }
 
-export async function createFolder(accessToken: string, name: string, parentId?: string): Promise<DriveFile> {
+async function createFolder(accessToken: string, name: string, parentId?: string): Promise<DriveFile> {
   const response = await driveFetch(accessToken, `${DRIVE_API}/files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -110,22 +101,6 @@ export async function downloadFileText(accessToken: string, fileId: string): Pro
   return response.text()
 }
 
-// Folds duplicate folders (same name+parent) into the oldest one: moves any
-// files out of each duplicate, then deletes the now-empty duplicate.
-async function mergeDuplicateFolders(accessToken: string, keepId: string, duplicates: DriveFile[]): Promise<void> {
-  for (const duplicate of duplicates) {
-    try {
-      const children = await listChildren(accessToken, duplicate.id)
-      for (const child of children) {
-        await moveFile(accessToken, child.id, duplicate.id, keepId)
-      }
-      await deleteFile(accessToken, duplicate.id)
-    } catch (error) {
-      console.error(`Failed to merge duplicate folder ${duplicate.id}:`, error)
-    }
-  }
-}
-
 // In-flight lock keyed by parent+name so concurrent callers await the same
 // search/create instead of racing each other into creating duplicate folders.
 const ensureFolderLocks = new Map<string, Promise<DriveFile>>()
@@ -136,17 +111,10 @@ export async function ensureFolder(accessToken: string, name: string, parentId?:
   if (inFlight) return inFlight
 
   const promise = (async () => {
-    // Oldest first, so duplicates fold into the folder that has been around
-    // longest and is most likely to hold the user's existing files.
     const clauses = [named(name), isFolder, NOT_TRASHED]
     if (parentId) clauses.push(inParent(parentId))
-    const matches = await queryFiles(accessToken, clauses, { orderBy: 'createdTime', pageSize: 100 })
-
-    if (matches.length === 0) return createFolder(accessToken, name, parentId)
-
-    const [keep, ...duplicates] = matches
-    if (duplicates.length > 0) await mergeDuplicateFolders(accessToken, keep.id, duplicates)
-    return keep
+    const matches = await queryFiles(accessToken, clauses)
+    return matches[0] ?? createFolder(accessToken, name, parentId)
   })()
 
   ensureFolderLocks.set(key, promise)

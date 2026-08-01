@@ -11,7 +11,7 @@ export function isoMonthsAgo(months: number): string {
   const date = new Date()
   date.setMonth(date.getMonth() - months)
   date.setDate(date.getDate() + 1)
-  return date.toISOString()
+  return isoDate(date)
 }
 
 // KSeF caps a single query's date range at 3 months. Given a "from" date,

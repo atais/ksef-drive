@@ -63,33 +63,20 @@ export interface GoogleUser {
   name: string
 }
 
-// Carries the HTTP status so callers can tell "this token is dead" from "the
-// network hiccuped" without knowing anything about the transport.
-export class GoogleAuthError extends Error {
-  readonly status: number | undefined
-
-  constructor(message: string, status?: number) {
-    super(message)
-    this.name = 'GoogleAuthError'
-    this.status = status
-  }
-}
-
 // Only a definitive rejection means a stored token is dead. A network blip
-// must not sign the user out — they'd have to re-consent.
+// throws without a status and must not sign the user out — they'd have to
+// re-consent.
 export function isRejectedToken(error: unknown): boolean {
-  return error instanceof GoogleAuthError && (error.status === 401 || error.status === 403)
+  const status = (error as { status?: number })?.status
+  return status === 401 || status === 403
 }
 
 export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUser> {
-  let response: Response
-  try {
-    response = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } })
-  } catch (error) {
-    throw new GoogleAuthError(error instanceof Error ? error.message : 'Google userinfo request failed')
-  }
+  const response = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } })
 
-  if (!response.ok) throw new GoogleAuthError(`Google userinfo failed: ${response.status}`, response.status)
+  if (!response.ok) {
+    throw Object.assign(new Error(`Google userinfo failed: ${response.status}`), { status: response.status })
+  }
 
   const data = await response.json()
   return { email: data.email, name: data.name }

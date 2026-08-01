@@ -4,9 +4,7 @@
 
 import { deleteFile, type DriveFile } from '../gdrive/driveApi'
 import { listMonthCategories, type CategorySection } from './archive'
-import { cancellable } from './cancellable'
 import { categoriesStore } from './categoriesStore.svelte'
-import { confirmAction } from './confirm.svelte'
 import { errorMessage } from './errors'
 import { counterpartyName, formatAmount } from './invoiceDisplay'
 import { invoiceRole, isInvoiceXml, ksefNumberFromFilename } from './invoiceFiling'
@@ -81,34 +79,27 @@ export class FilesStore {
     this.task.clearError()
     this.folders = []
 
-    return cancellable(
-      Promise.all([
-        listMonthCategories(accessToken, folderId, categoriesStore.categories),
-        invoicesDb.ensureLoaded(),
-      ]),
-      {
-        onResult: ([sections]) => (this.folders = sections),
-        onError: (error) => (this.task.error = errorMessage(error, 'Failed to load files')),
-        onSettled: () => (this.loading = false),
-      }
-    )
+    let cancelled = false
+    Promise.all([
+      listMonthCategories(accessToken, folderId, categoriesStore.categories),
+      invoicesDb.ensureLoaded(),
+    ])
+      .then(([sections]) => {
+        if (!cancelled) this.folders = sections
+      })
+      .catch((error) => {
+        if (!cancelled) this.task.error = errorMessage(error, 'Failed to load files')
+      })
+      .finally(() => {
+        if (!cancelled) this.loading = false
+      })
+
+    return () => (cancelled = true)
   }
 
   // Removes a filed invoice: deletes it from Drive and clears its filing state
   // in the DB, so it shows back up as pending on the Invoices page.
   async remove(file: DriveFile) {
-    const confirmed = await confirmAction({
-      title: `Delete "${file.name}" from Google Drive?`,
-      details: [
-        isInvoiceXml(file.name)
-          ? 'If it is a filed invoice it goes back to pending, so you can re-file it.'
-          : '',
-      ],
-      confirmLabel: 'Delete',
-      danger: true,
-    })
-    if (!confirmed) return
-
     await this.task.run(
       'Failed to remove file',
       async () => {

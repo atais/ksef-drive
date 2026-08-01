@@ -57,7 +57,7 @@ function matchesFilter(entry: InvoiceDbEntry, filter: StatusFilter): boolean {
 
 export class InvoicesStore {
   dateType = $state<InvoiceQueryDateType>('Invoicing')
-  from = $state(isoMonthsAgo(3).slice(0, 10))
+  from = $state(isoMonthsAgo(3))
   to = $state('')
   statusFilter = $state<StatusFilter>('pending')
 

@@ -8,11 +8,11 @@
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (!confirmDialog.isOpen) return
+    if (!request) return
     if (e.key === 'Escape') confirmDialog.answer(false)
     // Enter confirms, except for a destructive question: a stray keystroke
     // shouldn't be what deletes a category and every file in it.
-    if (e.key === 'Enter' && !confirmDialog.request?.danger) confirmDialog.answer(true)
+    if (e.key === 'Enter' && !request.danger) confirmDialog.answer(true)
   }
 </script>
 
@@ -27,7 +27,7 @@
     <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6" role="alertdialog" aria-modal="true">
       <p class="text-base font-semibold text-gray-900">{request.title}</p>
 
-      {#each confirmDialog.details as detail (detail)}
+      {#each request.details ?? [] as detail (detail)}
         <p class="mt-2 text-sm text-gray-600">{detail}</p>
       {/each}
 

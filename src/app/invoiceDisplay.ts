@@ -14,6 +14,12 @@ export function counterpartyName(invoice: InvoiceMetadata, role: InvoiceRole): s
     : invoice.seller?.name ?? invoice.seller?.nip
 }
 
+// Intl handles the separators and currency placement per locale; an unknown
+// currency code would throw, so it falls back to the plain "amount CODE" form.
 export function formatAmount(value: number, currency: string): string {
-  return `${value.toFixed(2)} ${currency}`
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
+  } catch {
+    return `${value.toFixed(2)} ${currency}`
+  }
 }
