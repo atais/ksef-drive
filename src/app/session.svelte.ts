@@ -13,7 +13,7 @@ import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './arch
 import { categoriesStore } from './categoriesStore.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 const CREDENTIALS_FILENAME = 'ksef_credentials.json'
 const STORAGE_KEY = 'gdrive_session'
