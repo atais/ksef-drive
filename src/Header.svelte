@@ -1,13 +1,7 @@
 <script lang="ts">
   import { Icon, Bars3, ArrowPath } from 'svelte-hero-icons'
-  import { navigation, type View } from './app/navigation.svelte'
+  import { navigation, NAV_ITEMS } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
-
-  const navItems: { id: View; label: string }[] = [
-    { id: 'invoices', label: 'KSEF' },
-    { id: 'files', label: 'Google Drive' },
-    { id: 'settings', label: 'Settings' },
-  ]
 </script>
 
 <header class="w-full border-b border-gray-200 bg-white sticky top-0 z-50">
@@ -25,7 +19,7 @@
 
     {#if session.user}
       <nav class="hidden md:flex items-center gap-0 flex-1">
-        {#each navItems as { id, label } (id)}
+        {#each NAV_ITEMS as { id, label } (id)}
           <button
             onclick={() => navigation.go(id)}
             class="flex items-center justify-center gap-2 px-4 h-full transition-colors text-sm font-medium {navigation.view === id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}"
@@ -50,7 +44,7 @@
             <p class="text-xs text-gray-500">{session.user.email}</p>
           </div>
         </div>
-        <button onclick={() => session.logout()} class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+        <button onclick={() => session.logout()} class="btn btn-sm btn-danger">
           Logout
         </button>
       </div>

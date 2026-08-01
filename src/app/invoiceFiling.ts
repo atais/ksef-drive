@@ -31,14 +31,22 @@ export function invoiceMonthKey(invoice: InvoiceMetadata): string {
   return monthKeyOf(Number.isNaN(date.getTime()) ? new Date() : date)
 }
 
+const XML_EXTENSION = /\.xml$/i
+
 export function invoiceFilename(ksefNumber: string): string {
   return `${ksefNumber}.xml`
+}
+
+// Whether a file on Drive is a filed invoice, i.e. something the preview can
+// be asked to render.
+export function isInvoiceXml(filename: string): boolean {
+  return XML_EXTENSION.test(filename)
 }
 
 // Strips the .xml extension a filed invoice was saved under to recover its
 // ksefNumber, the invoicesDb key.
 export function ksefNumberFromFilename(filename: string): string {
-  return filename.replace(/\.xml$/i, '')
+  return filename.replace(XML_EXTENSION, '')
 }
 
 // Resolves (creating if needed) the folder an invoice files into.

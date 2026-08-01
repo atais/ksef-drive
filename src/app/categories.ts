@@ -41,16 +41,16 @@ export function defaultCategories(): Category[] {
   return DEFAULT_CATEGORIES.map((category) => ({ ...category }))
 }
 
+export function kindLabel(kind: CategoryKind): string {
+  return CATEGORY_KINDS.find((option) => option.value === kind)?.label ?? kind
+}
+
 export function categoriesOfKind(categories: Category[], kind: CategoryKind): Category[] {
   return categories.filter((category) => category.kind === kind)
 }
 
 export function kindForRole(role: 'seller' | 'buyer'): CategoryKind {
   return role === 'seller' ? 'sold' : 'bought'
-}
-
-export function findCategory(categories: Category[], key: string): Category | undefined {
-  return categories.find((category) => category.key === key)
 }
 
 // The category an invoice should file into: its own, if that category still

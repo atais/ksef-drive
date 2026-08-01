@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+/* Shared control styles. Every button in the app is `btn` plus one colour
+   utility plus an optional size utility, so a colour or radius change happens
+   here rather than in a dozen class strings. */
+
+@utility btn {
+  @apply inline-flex items-center justify-center font-semibold rounded-lg transition-all;
+  @apply px-6 py-3 text-base;
+}
+
+/* Sizes */
+@utility btn-sm {
+  @apply px-4 py-2 text-sm;
+}
+
+/* A square icon-only button: no label, so no horizontal padding. */
+@utility btn-icon {
+  @apply w-8 h-8 p-0 flex-shrink-0;
+}
+
+/* Colours */
+@utility btn-primary {
+  @apply text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400;
+}
+
+@utility btn-danger {
+  @apply text-white bg-red-600 hover:bg-red-700 disabled:opacity-50;
+}
+
+@utility btn-success {
+  @apply text-white bg-green-600 hover:bg-green-700 disabled:opacity-50;
+}
+
+/* Unfilled button that only reacts on hover — used for secondary icon
+   actions sitting on a light row. */
+@utility btn-ghost {
+  @apply text-gray-600 hover:bg-gray-200 disabled:opacity-30;
+}
+
+/* Muted filled button, for an action that is neither primary nor destructive
+   (ignoring an invoice, say). */
+@utility btn-neutral {
+  @apply text-white bg-gray-400 hover:bg-gray-500 disabled:opacity-50;
+}
+
+/* Table cells. Every table in the app uses the same header and body spacing,
+   so alignment is the only thing a call site adds (`text-right` etc.). */
+@utility th {
+  @apply text-left py-3 px-4 text-sm font-semibold text-gray-600;
+}
+
+@utility td {
+  @apply py-4 px-4 text-sm text-gray-900;
+}
+
+/* Text input / select. `w-full` is left to the call site: some fields sit in
+   a flex row and size themselves. */
+@utility field {
+  @apply px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500;
+  @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}

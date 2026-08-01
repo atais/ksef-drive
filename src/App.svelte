@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { Icon, ArrowPath } from 'svelte-hero-icons'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
   import Header from './Header.svelte'
@@ -7,6 +6,8 @@
   import Settings from './Settings.svelte'
   import Invoices from './Invoices.svelte'
   import Files from './Files.svelte'
+  import ConfirmDialog from './ConfirmDialog.svelte'
+  import Spinner from './Spinner.svelte'
 
   session.restore()
 </script>
@@ -23,10 +24,7 @@
       <div class="w-full">
         {#if session.restoring}
           <div class="min-h-[calc(100vh-64px)] flex items-center justify-center">
-            <div class="text-center">
-              <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-              <p class="text-gray-600">Restoring session...</p>
-            </div>
+            <Spinner label="Restoring session..." />
           </div>
         {:else if !session.user}
           <div class="min-h-[calc(100vh-64px)] flex items-center justify-center px-4 py-20">
@@ -42,7 +40,7 @@
               <button
                 type="button"
                 onclick={() => session.login()}
-                class="inline-flex items-center justify-center px-8 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-600/30"
+                class="btn btn-primary px-8 hover:shadow-lg hover:shadow-blue-600/30"
               >
                 Sign in with Google
               </button>
@@ -50,19 +48,14 @@
           </div>
         {:else}
           <div class="min-h-[calc(100vh-64px)] p-4 sm:p-8">
-            {#if navigation.view === 'settings' || !session.ksefCredentials}
+            {#if navigation.activeView === 'settings'}
               <Settings />
-            {:else if navigation.view === 'files'}
+            {:else if navigation.activeView === 'files'}
               <Files />
-            {:else if session.ksefSessionToken}
+            {:else if navigation.activeView === 'invoices'}
               <Invoices />
             {:else}
-              <div class="flex items-center justify-center py-20">
-                <div class="text-center">
-                  <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-                  <p class="text-gray-600">Connecting to KSEF...</p>
-                </div>
-              </div>
+              <Spinner label="Connecting to KSEF..." />
             {/if}
           </div>
         {/if}
@@ -70,3 +63,5 @@
     </main>
   </div>
 </div>
+
+<ConfirmDialog />

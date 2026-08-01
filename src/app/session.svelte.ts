@@ -5,8 +5,12 @@
 // together: KSeF credentials live in the archive's .config folder, so Drive
 // must be connected before KSeF can authenticate.
 
-import axios from 'axios'
-import { requestGoogleAccessToken } from '../gdrive/googleAuth'
+import {
+  fetchGoogleUserInfo,
+  isRejectedToken,
+  requestGoogleAccessToken,
+  type GoogleUser,
+} from '../gdrive/googleAuth'
 import { deleteFileByName, readJsonFile, writeJsonFile } from '../gdrive/driveApi'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
@@ -14,13 +18,17 @@ import { categoriesStore } from './categoriesStore.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
-const USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 const CREDENTIALS_FILENAME = 'ksef_credentials.json'
 const STORAGE_KEY = 'gdrive_session'
 
-export interface GoogleUser {
-  email: string
-  name: string
+export type { GoogleUser }
+
+// Everything a Drive write needs, narrowed once so call sites are free of
+// null-checks on ids that are always present while a page is mounted.
+export interface DriveContext {
+  accessToken: string
+  rootFolderId: string
+  configFolderId: string
 }
 
 interface StoredSession {
@@ -38,13 +46,6 @@ function isInvalidCredentialsError(message: string): boolean {
   return message.includes('401') || message.includes('KSEF auth failed')
 }
 
-// Only a definitive rejection means the stored Google token is dead. A
-// network blip must not sign the user out — they'd have to re-consent.
-function isRejectedToken(error: unknown): boolean {
-  const status = axios.isAxiosError(error) ? error.response?.status : undefined
-  return status === 401 || status === 403
-}
-
 export class Session {
   user = $state<GoogleUser | null>(null)
   accessToken = $state<string | null>(null)
@@ -59,6 +60,27 @@ export class Session {
 
   readonly isConnected = $derived(!!(this.ksefCredentials && this.ksefSessionToken))
   readonly driveSyncing = $derived(this.driveSyncCount > 0)
+
+  // Every store that writes to Drive narrows the session the same way, so the
+  // check lives here rather than once per store.
+  requireDrive(): DriveContext {
+    const { accessToken, rootFolderId, configFolderId } = this
+    if (!accessToken || !rootFolderId || !configFolderId) throw new Error('Connect Google Drive first')
+    return { accessToken, rootFolderId, configFolderId }
+  }
+
+  // The invoice DB is per-NIP. Without one there's no way to tell which DB to
+  // read or rewrite, and an empty NIP would silently load an empty one.
+  requireNip(): string {
+    const nip = this.ksefCredentials?.nip
+    if (!nip) throw new Error('Connect KSeF first')
+    return nip
+  }
+
+  requireKsefSession(): string {
+    if (!this.ksefSessionToken) throw new Error('Not connected to KSEF')
+    return this.ksefSessionToken
+  }
 
   // Runs a Drive task in the background without blocking the caller, while
   // tracking it so the navbar can show a "syncing" indicator. Used for work
@@ -105,7 +127,7 @@ export class Session {
 
       const stored: StoredSession = JSON.parse(raw)
       try {
-        await axios.get(USERINFO_URL, { headers: { Authorization: `Bearer ${stored.accessToken}` } })
+        await fetchGoogleUserInfo(stored.accessToken)
       } catch (error) {
         // Keep the stored session on a transient failure so a reload can
         // retry; only a rejected token warrants signing the user out.
@@ -131,9 +153,7 @@ export class Session {
     try {
       const token = await requestGoogleAccessToken(GOOGLE_CLIENT_ID, DRIVE_SCOPE)
       this.accessToken = token
-
-      const userInfo = await axios.get(USERINFO_URL, { headers: { Authorization: `Bearer ${token}` } })
-      this.user = { email: userInfo.data.email, name: userInfo.data.name }
+      this.user = await fetchGoogleUserInfo(token)
 
       await this.openArchive(token)
       this.ksefCredentials = await this.loadKsefCredentials(token, this.configFolderId!)

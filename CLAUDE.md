@@ -19,7 +19,11 @@ Three layers. `gdrive` and `ksef` are peers that must not import each other —
 - `src/*.svelte` — markup and wiring only, no business logic
 
 Components read shared state from the `app/` singletons (`session`,
-`navigation`, `filesStore`, `folderTree`) rather than threading props.
+`navigation`, `categoriesStore`, `invoicesDb`, `filesStore`, `folderTree`)
+rather than threading props. `invoicesDb` is the single in-memory copy of the
+invoice DB — no store loads or writes that JSON itself. Actions run through
+`TaskState.run()` (busy key + error message); errors are formatted with
+`errorMessage()`.
 Per-page state (`InvoicesStore`, `InvoicePreview`, `CredentialsForm`) is
 instantiated by the component that owns it.
 

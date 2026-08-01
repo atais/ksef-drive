@@ -20,14 +20,9 @@ import {
   type CategoryKind,
 } from './categories'
 import { ksefNumberFromFilename } from './invoiceFiling'
-import { loadInvoicesDb, saveInvoicesDb, type InvoicesDb } from './invoicesDb'
-import { session } from './session.svelte'
-
-interface Drive {
-  accessToken: string
-  rootFolderId: string
-  configFolderId: string
-}
+import { invoicesDb } from './invoicesDbStore.svelte'
+import { session, type DriveContext } from './session.svelte'
+import { TaskState } from './task.svelte'
 
 export interface RemovalReport {
   name: string
@@ -41,12 +36,14 @@ export interface RemovalReport {
 export class CategoriesStore {
   categories = $state<Category[]>(defaultCategories())
   loading = $state(true)
-  saving = $state(false)
-  error = $state<string | null>(null)
   // Set after a removal so the page can report what it took with it.
   lastRemoval = $state<RemovalReport | null>(null)
 
+  private task = new TaskState()
+
   readonly names = $derived(this.categories.map((category) => category.key))
+  readonly saving = $derived(this.task.busy)
+  readonly error = $derived(this.task.error)
 
   ofKind(kind: CategoryKind): Category[] {
     return categoriesOfKind(this.categories, kind)
@@ -63,38 +60,36 @@ export class CategoriesStore {
     }
   }
 
-  private requireDrive(): Drive {
-    const { accessToken, rootFolderId, configFolderId } = session
-    if (!accessToken || !rootFolderId || !configFolderId) throw new Error('Connect Google Drive first')
-    return { accessToken, rootFolderId, configFolderId }
-  }
-
-  private async mutate(next: Category[], driveWork: (drive: Drive) => Promise<void>) {
-    this.saving = true
-    this.error = null
-    try {
-      const drive = this.requireDrive()
+  private mutate(next: Category[], driveWork: (drive: DriveContext) => Promise<void>) {
+    return this.task.run('Failed to update categories', async () => {
+      const drive = session.requireDrive()
       await driveWork(drive)
       await saveCategories(drive.accessToken, drive.configFolderId, next)
       this.categories = next
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to update categories'
-    } finally {
-      this.saving = false
-    }
+    })
   }
 
   // How many files a removal would delete. The page asks before going ahead,
-  // since the deletion takes the files with the folders.
-  async countFiles(key: string): Promise<number> {
-    const { accessToken, rootFolderId } = this.requireDrive()
-    return countCategoryFiles(accessToken, rootFolderId, key)
+  // since the deletion takes the files with the folders. A failure here is
+  // reported like any other: null means "couldn't tell", not "none".
+  async countFiles(key: string): Promise<number | null> {
+    const count = await this.task.run('Failed to count files', () => {
+      const { accessToken, rootFolderId } = session.requireDrive()
+      return countCategoryFiles(accessToken, rootFolderId, key)
+    })
+    return count ?? null
+  }
+
+  // The removal banner describes one action; it shouldn't survive a page
+  // change and reappear as if it just happened.
+  dismissRemoval() {
+    this.lastRemoval = null
   }
 
   async add(name: string, kind: CategoryKind) {
     const problem = validateCategoryName(name, this.categories)
     if (problem) {
-      this.error = problem
+      this.task.error = problem
       return
     }
 
@@ -125,36 +120,15 @@ export class CategoriesStore {
     this.lastRemoval = null
     const next = this.categories.filter((category) => category.key !== key)
 
-    await this.mutate(next, async (drive) => {
-      const removal = await removeCategoryFolders(drive.accessToken, drive.rootFolderId, key)
-      const unfiled = await this.unfileDeleted(drive, removal.files)
+    await this.mutate(next, async () => {
+      // Checked before the delete: failing afterwards would leave filed
+      // invoices pointing at folders that no longer exist.
+      session.requireNip()
+      const { accessToken, rootFolderId } = session.requireDrive()
+      const removal = await removeCategoryFolders(accessToken, rootFolderId, key)
+      const unfiled = await invoicesDb.unfile(removal.files.map(ksefNumberFromFilename))
       this.lastRemoval = { name: key, folders: removal.folders, files: removal.files.length, unfiled }
     })
-  }
-
-  // Clears the filing state of invoices whose XML was just deleted: they go
-  // back to pending with no category, so the Invoices page offers them for
-  // filing again instead of pointing at a folder that's gone.
-  private async unfileDeleted(drive: Drive, filenames: string[]): Promise<number> {
-    if (filenames.length === 0) return 0
-
-    const db = await loadInvoicesDb(
-      drive.accessToken,
-      drive.configFolderId,
-      session.ksefCredentials?.nip ?? ''
-    )
-    const next: InvoicesDb = { ...db }
-    let unfiled = 0
-
-    for (const filename of filenames) {
-      const entry = next[ksefNumberFromFilename(filename)]
-      if (!entry) continue
-      next[entry.metadata.ksefNumber] = { ...entry, accepted: false, category: null }
-      unfiled += 1
-    }
-
-    if (unfiled > 0) await saveInvoicesDb(drive.accessToken, drive.configFolderId, next)
-    return unfiled
   }
 }
 

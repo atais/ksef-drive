@@ -1,29 +1,34 @@
 <script lang="ts">
   import { Icon, XMark } from 'svelte-hero-icons'
+  import type { InvoicePreview } from './app/invoicePreview.svelte'
   import { parseInvoiceXml, type ParsedInvoice } from './ksef/invoiceXmlParser'
 
   interface Props {
-    xml: string | null
-    loading: boolean
-    error: string | null
-    onClose: () => void
+    // The modal owns its own open/closed rendering, so a page can mount it
+    // unconditionally and just hand over the preview state.
+    preview: InvoicePreview
   }
 
-  let { xml, loading, error, onClose }: Props = $props()
+  let { preview }: Props = $props()
 
-  const invoice = $derived<ParsedInvoice | null>(xml ? parseInvoiceXml(xml) : null)
+  const invoice = $derived<ParsedInvoice | null>(preview.xml ? parseInvoiceXml(preview.xml) : null)
+
+  function onClose() {
+    preview.close()
+  }
 
   function handleBackdropClick(e: MouseEvent) {
     if (e.target === e.currentTarget) onClose()
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') onClose()
+    if (preview.isOpen && e.key === 'Escape') onClose()
   }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
+{#if preview.isOpen}
 <div
   class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
   onclick={handleBackdropClick}
@@ -34,16 +39,16 @@
       type="button"
       onclick={onClose}
       aria-label="Close"
-      class="absolute top-2 right-2 inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 transition-all"
+      class="btn btn-icon btn-ghost absolute top-2 right-2"
     >
       <Icon src={XMark} class="w-5 h-5" />
     </button>
 
     <div class="p-6">
-      {#if loading}
+      {#if preview.loading}
         <p class="text-gray-600 text-sm text-center py-8">Loading invoice…</p>
-      {:else if error}
-        <p class="text-red-700 text-sm text-center py-8">{error}</p>
+      {:else if preview.error}
+        <p class="text-red-700 text-sm text-center py-8">{preview.error}</p>
       {:else if invoice}
         <div class="text-center mb-4">
           <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Faktura {invoice.formCode ?? ''}</p>
@@ -127,3 +132,4 @@
     </div>
   </div>
 </div>
+{/if}

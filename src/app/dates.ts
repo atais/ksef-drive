@@ -39,12 +39,6 @@ export function parseMonthKey(monthKey: string): { month: string; year: string }
   return match ? { month: match[1], year: match[2] } : null
 }
 
-// The 12 month options for the year the given key belongs to.
-export function monthOptionsForKey(key: string): string[] {
-  const year = parseMonthKey(key)?.year ?? String(new Date().getFullYear())
-  return Array.from({ length: 12 }, (_, i) => monthKey(i + 1, year))
-}
-
 // Month options for -1 to +3 months around an issue date.
 export function monthOptionsForDate(dateStr: string): string[] {
   const date = new Date(dateStr)
@@ -54,7 +48,6 @@ export function monthOptionsForDate(dateStr: string): string[] {
   // when the source day doesn't exist in the target month (e.g. the 31st).
   const base = new Date(date.getFullYear(), date.getMonth(), 1)
 
-  // Start from -1 month
   for (let i = -1; i <= 3; i++) {
     const optDate = new Date(base)
     optDate.setMonth(optDate.getMonth() + i)

@@ -1,5 +1,8 @@
 // Thin wrapper around Google Identity Services' token client (implicit flow),
-// replacing @react-oauth/google's useGoogleLogin for the svelte port.
+// plus the userinfo lookup that tells us who a token belongs to and whether
+// it is still good.
+
+const USERINFO_URL = 'https://www.googleapis.com/oauth2/v2/userinfo'
 
 declare global {
   interface Window {
@@ -53,4 +56,41 @@ export async function requestGoogleAccessToken(clientId: string, scope: string):
     })
     client.requestAccessToken()
   })
+}
+
+export interface GoogleUser {
+  email: string
+  name: string
+}
+
+// Carries the HTTP status so callers can tell "this token is dead" from "the
+// network hiccuped" without knowing anything about the transport.
+export class GoogleAuthError extends Error {
+  readonly status: number | undefined
+
+  constructor(message: string, status?: number) {
+    super(message)
+    this.name = 'GoogleAuthError'
+    this.status = status
+  }
+}
+
+// Only a definitive rejection means a stored token is dead. A network blip
+// must not sign the user out — they'd have to re-consent.
+export function isRejectedToken(error: unknown): boolean {
+  return error instanceof GoogleAuthError && (error.status === 401 || error.status === 403)
+}
+
+export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUser> {
+  let response: Response
+  try {
+    response = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } })
+  } catch (error) {
+    throw new GoogleAuthError(error instanceof Error ? error.message : 'Google userinfo request failed')
+  }
+
+  if (!response.ok) throw new GoogleAuthError(`Google userinfo failed: ${response.status}`, response.status)
+
+  const data = await response.json()
+  return { email: data.email, name: data.name }
 }

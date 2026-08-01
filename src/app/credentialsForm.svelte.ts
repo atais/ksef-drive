@@ -4,8 +4,13 @@
 
 import type { KsefCredentials } from '../ksef/ksefAuth'
 import { isValidNip, NIP_LENGTH, toNipInput } from '../ksef/nip'
+import { errorMessage } from './errors'
 
-export function readFileAsText(file: File): Promise<string> {
+// The two PEM fields the form uploads. Same handling for both, so the field
+// is a parameter rather than a pair of near-identical methods.
+export type PemField = 'certPem' | 'keyPem'
+
+function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(reader.result as string)
@@ -34,12 +39,9 @@ export class CredentialsForm {
     this.nip = toNipInput(value)
   }
 
-  async loadCert(file: File) {
-    this.certPem = await readFileAsText(file)
-  }
-
-  async loadKey(file: File) {
-    this.keyPem = await readFileAsText(file)
+  async loadPem(field: PemField, file: File | undefined) {
+    if (!file) return
+    this[field] = await readFileAsText(file)
   }
 
   // Merges entered values over the saved ones and validates. Returns null and
@@ -70,7 +72,7 @@ export class CredentialsForm {
     try {
       await save(credentials)
     } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Save failed'
+      this.error = errorMessage(error, 'Save failed')
     }
   }
 }

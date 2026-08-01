@@ -7,7 +7,7 @@ Svelte app integrating [KSeF](https://www.podatki.gov.pl/ksef/) (Polish e-invoic
 ## Tech Stack
 
 - **Vite** + **Svelte 5** + **TypeScript**
-- **Tailwind CSS v4** (via PostCSS)
+- **Tailwind CSS v4** (via PostCSS) — shared control styles as `@utility` classes in `src/index.css`
 - **Google Identity Services** for OAuth
 - **svelte-hero-icons** for UI icons
 
@@ -82,7 +82,9 @@ Three isolated layers (peers don't import each other):
 - **`src/app/`** — Session, navigation, filing rules, shared state stores
 - **`src/*.svelte`** — UI markup only, no business logic
 
-Components read state from `app/` singletons (`session`, `navigation`, `filesStore`, `folderTree`).
+Components read state from `app/` singletons (`session`, `navigation`, `categoriesStore`,
+`invoicesDb`, `filesStore`, `folderTree`). Page stores expose ready-to-render rows
+(`InvoicesStore.rows`, `FilesStore.sections`) so markup places values rather than deriving them.
 
 ## Google OAuth Setup (First-Time)
 

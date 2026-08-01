@@ -53,6 +53,29 @@ function migrate(db: Record<string, StoredEntry>, userNip: string): InvoicesDb {
   return Object.fromEntries(entries)
 }
 
+// Returns the entry as it looks once its XML is no longer on Drive. Both
+// flags travel together: `category` only means something while the file is
+// filed, so leaving it set would name a folder holding nothing.
+export function unfiledEntry(entry: InvoiceDbEntry): InvoiceDbEntry {
+  return { ...entry, accepted: false, category: null }
+}
+
+// Same, for a batch of invoices — used when a whole category folder goes and
+// takes every invoice filed into it with it.
+export function unfileEntries(db: InvoicesDb, ksefNumbers: string[]): { db: InvoicesDb; unfiled: number } {
+  const next: InvoicesDb = { ...db }
+  let unfiled = 0
+
+  for (const ksefNumber of ksefNumbers) {
+    const entry = next[ksefNumber]
+    if (!entry) continue
+    next[ksefNumber] = unfiledEntry(entry)
+    unfiled += 1
+  }
+
+  return { db: next, unfiled }
+}
+
 // Takes the user's NIP because reading a legacy entry can mean working out
 // which side of its invoice we were on.
 export async function loadInvoicesDb(

@@ -2,10 +2,12 @@
 // the local DB, then let the user accept / ignore / re-file each one, keeping
 // the DB and the Drive tree in step.
 
-import { queryAllInvoicesMetadata, type InvoiceQueryDateType } from '../ksef/invoiceApi'
+import { queryAllInvoicesMetadata, type InvoiceMetadata, type InvoiceQueryDateType } from '../ksef/invoiceApi'
 import { categoriesStore } from './categoriesStore.svelte'
 import { kindForRole, resolveCategory, type Category } from './categories'
-import { isoDate, isoMonthsAgo, maxToDate } from './dates'
+import { confirmAction } from './confirm.svelte'
+import { isoDate, isoMonthsAgo, maxToDate, monthOptionsForDate } from './dates'
+import { counterpartyName, formatAmount } from './invoiceDisplay'
 import {
   fileInvoice,
   invoiceMonthKey,
@@ -15,8 +17,10 @@ import {
   type FilingTarget,
   type InvoiceRole,
 } from './invoiceFiling'
-import { loadInvoicesDb, saveInvoicesDb, type InvoiceDbEntry, type InvoicesDb } from './invoicesDb'
+import { unfiledEntry, type InvoiceDbEntry, type InvoicesDb } from './invoicesDb'
+import { invoicesDb } from './invoicesDbStore.svelte'
 import { session } from './session.svelte'
+import { TaskState } from './task.svelte'
 
 export type StatusFilter = 'pending' | 'added' | 'ignored' | 'all'
 
@@ -26,6 +30,23 @@ export const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'ignored', label: 'Ignored' },
   { value: 'all', label: 'All' },
 ]
+
+// Everything one table row shows or acts on, worked out here so the markup
+// only has to place it.
+export interface InvoiceRow {
+  invoice: InvoiceMetadata
+  entry: InvoiceDbEntry
+  role: InvoiceRole
+  counterparty: string | undefined
+  gross: string
+  vat: string
+  // The categories this invoice may file into. One option means there's
+  // nothing to pick, so the row shows a label instead of a select.
+  categoryOptions: Category[]
+  category: string
+  monthOptions: string[]
+  saving: boolean
+}
 
 function matchesFilter(entry: InvoiceDbEntry, filter: StatusFilter): boolean {
   if (filter === 'pending') return !entry.accepted && !entry.ignored
@@ -40,55 +61,61 @@ export class InvoicesStore {
   to = $state('')
   statusFilter = $state<StatusFilter>('pending')
 
-  db = $state<InvoicesDb>({})
-  loadingDb = $state(true)
   syncing = $state(false)
-  error = $state<string | null>(null)
-  savingKsefNumber = $state<string | null>(null)
   // Category a pending invoice will file into once accepted. Kept in memory
   // only: an entry's own `category` stays empty until its XML is on Drive, so
   // the DB never names a folder nothing was filed into.
   private drafts = $state<Record<string, string>>({})
+  private task = new TaskState()
 
-  readonly invoices = $derived(
-    Object.values(this.db)
+  readonly loadingDb = $derived(invoicesDb.loading)
+  readonly error = $derived(this.task.error)
+
+  readonly rows = $derived(
+    Object.values(invoicesDb.entries)
       .filter((entry) => matchesFilter(entry, this.statusFilter))
-      .map((entry) => entry.metadata)
-      .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1))
+      .sort((a, b) => (a.metadata.issueDate < b.metadata.issueDate ? 1 : -1))
+      .map((entry) => this.toRow(entry))
   )
 
-  // Which side of the invoice we're on. Derived on every read rather than
-  // stored: it's a comparison against our own NIP, and that NIP can be fixed
-  // or changed long after the invoice was synced.
-  roleOf(entry: InvoiceDbEntry): InvoiceRole {
-    return invoiceRole(entry.metadata, session.ksefCredentials?.nip ?? '')
-  }
+  // The two action columns swap meaning with the filter: on the "added" list
+  // the only thing to do is take an invoice back off Drive.
+  readonly acceptColumnLabel = $derived(this.statusFilter === 'added' ? 'Remove' : 'Approve')
+  readonly ignoreColumnLabel = $derived(this.statusFilter === 'ignored' ? 'Restore' : 'Ignore')
 
-  // The categories the user may file this invoice into: sold categories for
-  // invoices we issued, bought ones for invoices we received. "Other"
-  // categories are archive-only and never offered here.
-  categoryOptions(entry: InvoiceDbEntry): Category[] {
-    return categoriesStore.ofKind(kindForRole(this.roleOf(entry)))
+  private toRow(entry: InvoiceDbEntry): InvoiceRow {
+    const invoice = entry.metadata
+    // Which side of the invoice we're on is derived on every read rather than
+    // stored: it's a comparison against our own NIP, and that NIP can be fixed
+    // or changed long after the invoice was synced.
+    const role = invoiceRole(invoice, session.ksefCredentials?.nip ?? '')
+    return {
+      invoice,
+      entry,
+      role,
+      counterparty: counterpartyName(invoice, role),
+      gross: formatAmount(invoice.grossAmount, invoice.currency),
+      vat: formatAmount(invoice.vatAmount, invoice.currency),
+      // Sold categories for invoices we issued, bought ones for invoices we
+      // received. "Other" categories are archive-only and never offered here.
+      categoryOptions: categoriesStore.ofKind(kindForRole(role)),
+      category: this.categoryFor(entry, role),
+      monthOptions: monthOptionsForDate(invoice.issueDate),
+      saving: this.task.isBusy(invoice.ksefNumber),
+    }
   }
 
   // The category to display and to file into: the folder an accepted invoice
   // sits in, or a pending one's pick. Either can name a category the user has
   // since deleted, hence the fallback to the first of the right kind.
-  categoryFor(entry: InvoiceDbEntry): string {
+  private categoryFor(entry: InvoiceDbEntry, role: InvoiceRole): string {
     const preferred = entry.category ?? this.drafts[entry.metadata.ksefNumber]
-    return resolveCategory(categoriesStore.categories, kindForRole(this.roleOf(entry)), preferred) ?? preferred ?? ''
+    return resolveCategory(categoriesStore.categories, kindForRole(role), preferred) ?? preferred ?? ''
   }
 
   private draftCategory(ksefNumber: string, category: string | null) {
     if (!category) return
     this.drafts = { ...this.drafts, [ksefNumber]: category }
-  }
-
-  // Narrowing the session once per action keeps every call site free of
-  // null-checks on tokens that are always present while this page is mounted.
-  private requireDrive(): { accessToken: string; rootFolderId: string } {
-    if (!session.accessToken || !session.rootFolderId) throw new Error('Connect Google Drive first')
-    return { accessToken: session.accessToken, rootFolderId: session.rootFolderId }
   }
 
   // Every Drive write needs a folder name, and only a filed invoice carries
@@ -103,25 +130,6 @@ export class InvoicesStore {
     return { rootFolderId, monthKey, category: folder }
   }
 
-  private async persist(next: InvoicesDb) {
-    this.db = next
-    if (session.accessToken && session.configFolderId) {
-      await saveInvoicesDb(session.accessToken, session.configFolderId, next)
-    }
-  }
-
-  private async withEntry(ksefNumber: string, action: () => Promise<void>) {
-    this.savingKsefNumber = ksefNumber
-    this.error = null
-    try {
-      await action()
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Action failed'
-    } finally {
-      this.savingKsefNumber = null
-    }
-  }
-
   // If today is beyond the 3-month window KSeF allows from the new "from"
   // date, cap "to" so the range stays queryable.
   setFrom(value: string) {
@@ -130,161 +138,164 @@ export class InvoicesStore {
     if (isoDate(new Date()) > cap) this.to = cap
   }
 
-  async load() {
-    if (!session.accessToken || !session.configFolderId) return
-    this.loadingDb = true
-    try {
-      this.db = await loadInvoicesDb(
-        session.accessToken,
-        session.configFolderId,
-        session.ksefCredentials?.nip ?? ''
-      )
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to load invoices DB'
-    } finally {
-      this.loadingDb = false
-    }
+  load() {
+    return this.task.run('Failed to load invoices DB', () => invoicesDb.load())
   }
 
   // Extends the local DB with invoices from KSeF for the selected date range,
   // across every subject role. Never removes DB entries — the displayed list
   // always reflects DB state, and existing filing decisions are preserved.
   async sync() {
-    if (!session.ksefSessionToken) return
     this.syncing = true
-    this.error = null
-    try {
-      const fetched = await queryAllInvoicesMetadata(session.ksefSessionToken, {
+    await this.task.run('Failed to sync invoices', async () => {
+      const sessionToken = session.requireKsefSession()
+      const fetched = await queryAllInvoicesMetadata(sessionToken, {
         dateType: this.dateType,
         from: new Date(this.from).toISOString(),
         to: this.to ? new Date(this.to).toISOString() : undefined,
       })
 
-      const next: InvoicesDb = { ...this.db }
+      const next: InvoicesDb = { ...invoicesDb.entries }
       for (const invoice of fetched) {
-        const existing = this.db[invoice.ksefNumber]
-        if (existing) {
-          next[invoice.ksefNumber] = { ...existing, metadata: invoice }
-          continue
-        }
-
-        next[invoice.ksefNumber] = {
-          metadata: invoice,
-          accepted: false,
-          ignored: false,
-          monthKey: invoiceMonthKey(invoice),
-          // Nothing is filed yet, so no category is claimed. Accepting picks it.
-          category: null,
-        }
+        const existing = next[invoice.ksefNumber]
+        next[invoice.ksefNumber] = existing
+          ? { ...existing, metadata: invoice }
+          : {
+              metadata: invoice,
+              accepted: false,
+              ignored: false,
+              monthKey: invoiceMonthKey(invoice),
+              // Nothing is filed yet, so no category is claimed. Accepting picks it.
+              category: null,
+            }
       }
 
-      await this.persist(next)
-    } catch (error) {
-      this.error = error instanceof Error ? error.message : 'Failed to sync invoices'
-    } finally {
-      this.syncing = false
-    }
+      await invoicesDb.replaceAll(next)
+    })
+    this.syncing = false
   }
 
   // Accepting downloads the XML and files it under the invoice's month
   // bucket and category.
-  async accept(entry: InvoiceDbEntry) {
+  async accept(row: InvoiceRow) {
+    const { entry, category } = row
     const ksefNumber = entry.metadata.ksefNumber
-    await this.withEntry(ksefNumber, async () => {
-      const { accessToken, rootFolderId } = this.requireDrive()
-      if (!session.ksefSessionToken) throw new Error('Not connected to KSEF')
-      // Resolve now: this is where the pending pick (or the default for the
-      // role) becomes the category the entry records.
-      const category = this.categoryFor(entry)
-      if (!category) throw new Error('No category to file this invoice into')
-      await fileInvoice(
-        accessToken,
-        session.ksefSessionToken,
-        ksefNumber,
-        this.filingTarget(entry, rootFolderId, { category })
-      )
-      await this.persist({ ...this.db, [ksefNumber]: { ...entry, category, accepted: true } })
-    })
+    await this.task.run(
+      'Failed to file invoice',
+      async () => {
+        const { accessToken, rootFolderId } = session.requireDrive()
+        const sessionToken = session.requireKsefSession()
+        // Resolve now: this is where the pending pick (or the default for the
+        // role) becomes the category the entry records.
+        if (!category) throw new Error('No category to file this invoice into')
+        await fileInvoice(
+          accessToken,
+          sessionToken,
+          ksefNumber,
+          this.filingTarget(entry, rootFolderId, { category })
+        )
+        await invoicesDb.save({ ...entry, category, accepted: true })
+      },
+      ksefNumber
+    )
   }
 
   async unaccept(entry: InvoiceDbEntry) {
     const ksefNumber = entry.metadata.ksefNumber
-    await this.withEntry(ksefNumber, async () => {
-      const { accessToken, rootFolderId } = this.requireDrive()
-      await unfileInvoice(accessToken, ksefNumber, this.filingTarget(entry, rootFolderId))
-      // The folder it came out of becomes the pending pick, so the picker
-      // doesn't jump elsewhere the moment the XML is gone.
-      this.draftCategory(ksefNumber, entry.category)
-      await this.persist({ ...this.db, [ksefNumber]: { ...entry, accepted: false, category: null } })
+    const confirmed = await confirmAction({
+      title: 'Remove this invoice from Google Drive?',
+      details: [`Its XML in ${entry.category} will be deleted; the invoice goes back to pending.`],
+      confirmLabel: 'Remove',
+      danger: true,
     })
+    if (!confirmed) return
+
+    await this.task.run(
+      'Failed to remove filed invoice',
+      async () => {
+        const { accessToken, rootFolderId } = session.requireDrive()
+        await unfileInvoice(accessToken, ksefNumber, this.filingTarget(entry, rootFolderId))
+        // The folder it came out of becomes the pending pick, so the picker
+        // doesn't jump elsewhere the moment the XML is gone.
+        this.draftCategory(ksefNumber, entry.category)
+        await invoicesDb.unfileOne(entry)
+      },
+      ksefNumber
+    )
   }
 
   // Ignoring an accepted invoice also removes its filed XML, so ignored
-  // invoices never stay on Drive.
-  async ignore(ksefNumber: string) {
-    const entry = this.db[ksefNumber]
-    if (!entry) return
-    await this.withEntry(ksefNumber, async () => {
-      if (entry.accepted) {
-        const { accessToken, rootFolderId } = this.requireDrive()
-        await unfileInvoice(accessToken, ksefNumber, this.filingTarget(entry, rootFolderId))
-        this.draftCategory(ksefNumber, entry.category)
-      }
-      await this.persist({
-        ...this.db,
-        [ksefNumber]: { ...entry, accepted: false, ignored: true, category: null },
+  // invoices never stay on Drive — which makes it destructive, so it asks.
+  async ignore(entry: InvoiceDbEntry) {
+    const ksefNumber = entry.metadata.ksefNumber
+    if (entry.accepted) {
+      const confirmed = await confirmAction({
+        title: 'Ignore this invoice?',
+        details: [`It is filed in ${entry.category}; that XML will be deleted from Google Drive.`],
+        confirmLabel: 'Ignore',
+        danger: true,
       })
-    })
+      if (!confirmed) return
+    }
+
+    await this.task.run(
+      'Failed to ignore invoice',
+      async () => {
+        if (entry.accepted) {
+          const { accessToken, rootFolderId } = session.requireDrive()
+          await unfileInvoice(accessToken, ksefNumber, this.filingTarget(entry, rootFolderId))
+          this.draftCategory(ksefNumber, entry.category)
+        }
+        await invoicesDb.save({ ...unfiledEntry(entry), ignored: true })
+      },
+      ksefNumber
+    )
   }
 
-  async restore(ksefNumber: string) {
-    const entry = this.db[ksefNumber]
-    if (!entry) return
-    await this.persist({ ...this.db, [ksefNumber]: { ...entry, ignored: false } })
+  async restore(entry: InvoiceDbEntry) {
+    await this.task.run(
+      'Failed to restore invoice',
+      () => invoicesDb.save({ ...entry, ignored: false }),
+      entry.metadata.ksefNumber
+    )
   }
 
   // Changing where an accepted invoice is filed moves its XML on Drive too,
   // or the old copy is orphaned in the folder it came from.
-  private async refile(ksefNumber: string, change: { monthKey?: string; category?: string }) {
-    const entry = this.db[ksefNumber]
-    if (!entry) return
-
+  private async refile(entry: InvoiceDbEntry, change: { monthKey?: string; category?: string }) {
     const monthKey = change.monthKey ?? entry.monthKey
     const category = change.category ?? entry.category
     if (monthKey === entry.monthKey && category === entry.category) return
 
-    if (entry.accepted) {
-      try {
-        const { accessToken, rootFolderId } = this.requireDrive()
-        this.error = null
-        await refileInvoice(
-          accessToken,
-          ksefNumber,
-          this.filingTarget(entry, rootFolderId),
-          this.filingTarget(entry, rootFolderId, { monthKey, category: change.category })
-        )
-      } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to move filed invoice'
-        return
-      }
-    }
-
-    await this.persist({ ...this.db, [ksefNumber]: { ...entry, monthKey, category } })
+    await this.task.run(
+      'Failed to move filed invoice',
+      async () => {
+        if (entry.accepted) {
+          const { accessToken, rootFolderId } = session.requireDrive()
+          await refileInvoice(
+            accessToken,
+            entry.metadata.ksefNumber,
+            this.filingTarget(entry, rootFolderId),
+            this.filingTarget(entry, rootFolderId, { monthKey, category: change.category })
+          )
+        }
+        await invoicesDb.save({ ...entry, monthKey, category })
+      },
+      entry.metadata.ksefNumber
+    )
   }
 
-  setMonth(ksefNumber: string, monthKey: string) {
-    return this.refile(ksefNumber, { monthKey })
+  setMonth(entry: InvoiceDbEntry, monthKey: string) {
+    return this.refile(entry, { monthKey })
   }
 
   // A pending invoice records no category, so its pick is only remembered —
   // accepting is what writes it. An accepted one moves on Drive instead.
-  async setCategory(ksefNumber: string, category: string) {
-    const entry = this.db[ksefNumber]
-    if (!entry) return
+  async setCategory(entry: InvoiceDbEntry, category: string) {
     if (!entry.accepted) {
-      this.draftCategory(ksefNumber, category)
+      this.draftCategory(entry.metadata.ksefNumber, category)
       return
     }
-    await this.refile(ksefNumber, { category })
+    await this.refile(entry, { category })
   }
 }

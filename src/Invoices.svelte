@@ -1,17 +1,15 @@
 <script lang="ts">
   import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
-  import { downloadInvoiceXml } from './ksef/invoiceApi'
-  import { monthOptionsForDate } from './app/dates'
-  import { InvoicePreview } from './app/invoicePreview.svelte'
+  import { ksefPreview } from './app/invoicePreview.svelte'
   import { InvoicesStore, STATUS_FILTERS, type StatusFilter } from './app/invoicesStore.svelte'
-  import { session } from './app/session.svelte'
+  import ErrorBanner from './ErrorBanner.svelte'
   import InvoicePreviewModal from './InvoicePreviewModal.svelte'
+  import Spinner from './Spinner.svelte'
 
   const store = new InvoicesStore()
-  const preview = new InvoicePreview((ksefNumber) => downloadInvoiceXml(session.ksefSessionToken!, ksefNumber))
+  const preview = ksefPreview()
 
-  store.dateType = 'Invoicing'
-  store.load()
+  void store.load()
 </script>
 
 <div class="bg-white rounded-xl">
@@ -40,7 +38,7 @@
       type="button"
       onclick={() => store.sync()}
       disabled={store.syncing || store.loadingDb}
-      class="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-all"
+      class="btn btn-sm btn-primary"
     >
       {store.syncing ? 'Syncing...' : 'Sync'}
     </button>
@@ -59,18 +57,13 @@
     </div>
   </div>
 
-  {#if store.error}
-    <div class="mb-4 px-4 py-2 text-sm text-red-700 bg-red-50 rounded-lg">{store.error}</div>
-  {/if}
+  <div class="mb-4">
+    <ErrorBanner message={store.error} />
+  </div>
 
   {#if store.loadingDb}
-    <div class="flex items-center justify-center py-20">
-      <div class="text-center">
-        <Icon src={ArrowPath} class="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-        <p class="text-gray-600 font-medium">Loading invoices...</p>
-      </div>
-    </div>
-  {:else if store.invoices.length === 0}
+    <Spinner label="Loading invoices..." />
+  {:else if store.rows.length === 0}
     <div class="text-center py-12">
       <p class="text-gray-600 font-medium">No invoices yet</p>
       <p class="text-gray-500 text-sm">Pick a date range and click "Sync" to pull invoices from KSEF</p>
@@ -80,47 +73,31 @@
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200">
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Issue Date</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Entity</th>
-            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">Gross</th>
-            <th class="text-right py-3 px-4 text-sm font-semibold text-gray-600">VAT</th>
-            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">Preview</th>
-            <th class="text-left py-3 px-4 text-sm font-semibold text-gray-600">Category</th>
-            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">
-              {store.statusFilter === 'added' ? 'Remove' : 'Approve'}
-            </th>
-            <th class="text-center py-3 px-4 text-sm font-semibold text-gray-600">
-              {store.statusFilter === 'ignored' ? 'Restore' : 'Ignore'}
-            </th>
+            <th class="th">Issue Date</th>
+            <th class="th">Entity</th>
+            <th class="th text-right">Gross</th>
+            <th class="th text-right">VAT</th>
+            <th class="th text-center">Preview</th>
+            <th class="th">Category</th>
+            <th class="th text-center">{store.acceptColumnLabel}</th>
+            <th class="th text-center">{store.ignoreColumnLabel}</th>
           </tr>
         </thead>
         <tbody>
-          {#each store.invoices as invoice (invoice.ksefNumber)}
-            {@const entry = store.db[invoice.ksefNumber]}
-            {@const isSaving = store.savingKsefNumber === invoice.ksefNumber}
-            {@const role = store.roleOf(entry)}
-            {@const counterparty = role === 'seller'
-              ? invoice.buyer?.name ?? invoice.buyer?.identifier?.value
-              : invoice.seller?.name ?? invoice.seller?.nip}
-            {@const options = store.categoryOptions(entry)}
-            {@const category = store.categoryFor(entry)}
+          {#each store.rows as row (row.invoice.ksefNumber)}
             <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-              <td class="py-4 px-4 text-sm text-gray-600">{invoice.issueDate}</td>
-              <td class="py-4 px-4 text-sm text-gray-900">{counterparty}</td>
-              <td class="py-4 px-4 text-sm text-right text-gray-900">
-                {invoice.grossAmount.toFixed(2)} {invoice.currency}
-              </td>
-              <td class="py-4 px-4 text-sm text-right text-gray-900">
-                {invoice.vatAmount.toFixed(2)} {invoice.currency}
-              </td>
+              <td class="td text-gray-600">{row.invoice.issueDate}</td>
+              <td class="td">{row.counterparty}</td>
+              <td class="td text-right">{row.gross}</td>
+              <td class="td text-right">{row.vat}</td>
               <td class="py-4 px-4">
                 <div class="flex items-center justify-center">
                   <button
                     type="button"
-                    onclick={() => preview.open(invoice.ksefNumber)}
+                    onclick={() => preview.open(row.invoice.ksefNumber)}
                     title="Preview invoice"
                     aria-label="Preview invoice"
-                    class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-gray-600 hover:bg-gray-100 transition-all"
+                    class="btn btn-icon btn-ghost"
                   >
                     <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
                   </button>
@@ -128,31 +105,31 @@
               </td>
               <td class="py-4 px-4">
                 <div class="flex items-center gap-2">
-                  {#if options.length > 1}
+                  {#if row.categoryOptions.length > 1}
                     <select
-                      value={category}
-                      onchange={(e) => store.setCategory(invoice.ksefNumber, (e.target as HTMLSelectElement).value)}
+                      value={row.category}
+                      onchange={(e) => store.setCategory(row.entry, (e.target as HTMLSelectElement).value)}
                       title="Filing category"
-                      class="px-2 py-1 text-xs font-semibold rounded-lg border {role === 'seller' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}"
+                      class="px-2 py-1 text-xs font-semibold rounded-lg border {row.role === 'seller' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}"
                     >
-                      {#each options as option (option.key)}
+                      {#each row.categoryOptions as option (option.key)}
                         <option value={option.key}>{option.key}</option>
                       {/each}
                     </select>
                   {:else}
                     <span
-                      class="px-2 py-0.5 text-xs font-semibold rounded-full {role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
-                      title={`Filed to ${category}`}
+                      class="px-2 py-0.5 text-xs font-semibold rounded-full {row.role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
+                      title={`Filed to ${row.category}`}
                     >
-                      {category}
+                      {row.category}
                     </span>
                   {/if}
                   <select
-                    value={entry.monthKey}
-                    onchange={(e) => store.setMonth(invoice.ksefNumber, (e.target as HTMLSelectElement).value)}
+                    value={row.entry.monthKey}
+                    onchange={(e) => store.setMonth(row.entry, (e.target as HTMLSelectElement).value)}
                     class="px-2 py-1 text-xs rounded-lg border border-gray-300 bg-white text-gray-900"
                   >
-                    {#each monthOptionsForDate(invoice.issueDate) as option (option)}
+                    {#each row.monthOptions as option (option)}
                       <option value={option}>{option}</option>
                     {/each}
                   </select>
@@ -160,53 +137,54 @@
               </td>
               <td class="py-4 px-4">
                 <div class="flex items-center justify-center">
-                  {#if entry.ignored}
+                  {#if row.entry.ignored}
                     <span class="text-xs text-gray-400">-</span>
-                  {:else if entry.accepted}
+                  {:else if row.entry.accepted}
                     <button
                       type="button"
-                      onclick={() => store.unaccept(entry)}
-                      disabled={isSaving}
+                      onclick={() => store.unaccept(row.entry)}
+                      disabled={row.saving}
                       title="Remove from Drive"
                       aria-label="Remove from Drive"
-                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-all"
+                      class="btn btn-icon btn-danger"
                     >
                       <Icon src={Trash} class="w-4 h-4" />
                     </button>
                   {:else}
                     <button
                       type="button"
-                      onclick={() => store.accept(entry)}
-                      disabled={isSaving}
+                      onclick={() => store.accept(row)}
+                      disabled={row.saving}
                       title="Add"
                       aria-label="Add"
-                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 transition-all"
+                      class="btn btn-icon btn-success"
                     >
-                      <Icon src={isSaving ? ArrowPath : Check} class="w-4 h-4 {isSaving ? 'animate-spin' : ''}" />
+                      <Icon src={row.saving ? ArrowPath : Check} class="w-4 h-4 {row.saving ? 'animate-spin' : ''}" />
                     </button>
                   {/if}
                 </div>
               </td>
               <td class="py-4 px-4">
                 <div class="flex items-center justify-center">
-                  {#if entry.ignored}
+                  {#if row.entry.ignored}
                     <button
                       type="button"
-                      onclick={() => store.restore(invoice.ksefNumber)}
+                      onclick={() => store.restore(row.entry)}
+                      disabled={row.saving}
                       title="Restore"
                       aria-label="Restore"
-                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-all"
+                      class="btn btn-icon btn-primary"
                     >
                       <Icon src={Eye} class="w-4 h-4" />
                     </button>
                   {:else}
                     <button
                       type="button"
-                      onclick={() => store.ignore(invoice.ksefNumber)}
-                      disabled={isSaving}
+                      onclick={() => store.ignore(row.entry)}
+                      disabled={row.saving}
                       title="Ignore"
                       aria-label="Ignore"
-                      class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-white bg-gray-400 hover:bg-gray-500 disabled:opacity-50 transition-all"
+                      class="btn btn-icon btn-neutral"
                     >
                       <Icon src={EyeSlash} class="w-4 h-4" />
                     </button>
@@ -221,11 +199,4 @@
   {/if}
 </div>
 
-{#if preview.isOpen}
-  <InvoicePreviewModal
-    xml={preview.xml}
-    loading={preview.loading}
-    error={preview.error}
-    onClose={() => preview.close()}
-  />
-{/if}
+<InvoicePreviewModal {preview} />

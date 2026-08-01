@@ -1,9 +1,10 @@
 <script lang="ts">
   import { untrack } from 'svelte'
-  import { Icon, ArrowPath } from 'svelte-hero-icons'
-  import { CredentialsForm } from './app/credentialsForm.svelte'
+  import { CredentialsForm, type PemField } from './app/credentialsForm.svelte'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
+  import ErrorBanner from './ErrorBanner.svelte'
+  import Spinner from './Spinner.svelte'
   import type { KsefCredentials } from './ksef/ksefAuth'
 
   interface Props {
@@ -25,14 +26,8 @@
     })
   }
 
-  async function pickCert(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0]
-    if (file) await form.loadCert(file)
-  }
-
-  async function pickKey(e: Event) {
-    const file = (e.target as HTMLInputElement).files?.[0]
-    if (file) await form.loadKey(file)
+  function pickPem(field: PemField) {
+    return (e: Event) => form.loadPem(field, (e.target as HTMLInputElement).files?.[0])
   }
 </script>
 
@@ -60,7 +55,7 @@
         value={form.nip}
         oninput={(e) => form.setNip((e.target as HTMLInputElement).value)}
         placeholder="1234567890"
-        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+        class="field w-full"
         disabled={session.savingCredentials}
       />
     </div>
@@ -71,7 +66,7 @@
         id="cert"
         type="file"
         accept=".crt,.pem,.cer"
-        onchange={pickCert}
+        onchange={pickPem('certPem')}
         class="w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
         disabled={session.savingCredentials}
       />
@@ -88,7 +83,7 @@
         id="key"
         type="file"
         accept=".key,.pem"
-        onchange={pickKey}
+        onchange={pickPem('keyPem')}
         class="w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
         disabled={session.savingCredentials}
       />
@@ -107,24 +102,20 @@
         value={form.keyPassword}
         oninput={(e) => (form.keyPassword = (e.target as HTMLInputElement).value)}
         placeholder={form.isEdit ? 'Leave empty to keep current password' : 'Password protecting the private key'}
-        class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+        class="field w-full"
         disabled={session.savingCredentials}
       />
     </div>
 
-    {#if form.error}
-      <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
-        <p class="text-sm text-red-600">{form.error}</p>
-      </div>
-    {/if}
+    <ErrorBanner message={form.error} />
 
     <button
       type="submit"
       disabled={session.savingCredentials}
-      class="w-full inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-600/30"
+      class="btn btn-primary w-full hover:shadow-lg hover:shadow-blue-600/30"
     >
       {#if session.savingCredentials}
-        <Icon src={ArrowPath} class="w-5 h-5 mr-2 animate-spin" />
+        <Spinner variant="inline" />
         Saving...
       {:else if form.isEdit}
         Save Changes
