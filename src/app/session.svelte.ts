@@ -150,6 +150,7 @@ export class Session {
   }
 
   async login() {
+    this.restoring = true
     try {
       const token = await requestGoogleAccessToken(GOOGLE_CLIENT_ID, DRIVE_SCOPE)
       this.accessToken = token
@@ -159,9 +160,11 @@ export class Session {
       this.ksefCredentials = await this.loadKsefCredentials(token, this.configFolderId!)
       this.persist()
 
-      if (this.ksefCredentials) void this.authenticateKsef(this.ksefCredentials)
+      if (this.ksefCredentials) await this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Login/init failed:', error)
+    } finally {
+      this.restoring = false
     }
   }
 
