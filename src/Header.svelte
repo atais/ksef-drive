@@ -48,6 +48,12 @@
           Logout
         </button>
       </div>
+    {:else}
+      <div class="flex items-center justify-end flex-1 px-4 sm:px-6">
+        <button onclick={() => session.login()} class="btn btn-sm btn-primary">
+          Login
+        </button>
+      </div>
     {/if}
   </div>
 </header>
