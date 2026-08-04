@@ -3,14 +3,17 @@
 // month folder the sidebar has selected.
 
 import { session } from './session.svelte'
+import { i18n } from './i18n.svelte'
 
 export type View = 'settings' | 'invoices' | 'files'
 
-export const NAV_ITEMS: { id: View; label: string }[] = [
-  { id: 'invoices', label: 'KSEF' },
-  { id: 'files', label: 'Google Drive' },
-  { id: 'settings', label: 'Settings' },
-]
+export function navItems(): { id: View; label: string }[] {
+  return [
+    { id: 'invoices', label: i18n.t('nav.ksef') },
+    { id: 'files', label: i18n.t('nav.drive') },
+    { id: 'settings', label: i18n.t('nav.settings') },
+  ]
+}
 
 // What actually renders. Differs from the picked view in two cases the
 // session forces: there's nothing to show before KSeF is configured, and the

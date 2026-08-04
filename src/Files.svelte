@@ -4,6 +4,7 @@
   import { filesStore } from './app/filesStore.svelte'
   import { drivePreview } from './app/invoicePreview.svelte'
   import { navigation } from './app/navigation.svelte'
+  import { i18n } from './app/i18n.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
   import InvoicePreviewModal from './InvoicePreviewModal.svelte'
   import Spinner from './Spinner.svelte'
@@ -26,18 +27,18 @@
   {#if !navigation.selectedFolderId}
     <div class="text-center py-12">
       <Icon src={Document} class="w-16 h-16 text-gray-400 mx-auto mb-4" />
-      <p class="text-gray-600 font-medium">Pick a month</p>
-      <p class="text-gray-500 text-sm">Select a month in the sidebar to see its files</p>
+      <p class="text-gray-600 font-medium">{i18n.t('files.pickMonth')}</p>
+      <p class="text-gray-500 text-sm">{i18n.t('files.pickMonthHint')}</p>
     </div>
   {:else if filesStore.loading && filesStore.sections.length === 0}
-    <Spinner label="Loading files..." />
+    <Spinner label={i18n.t('files.loading')} />
   {:else}
     <div class="space-y-6">
       {#each filesStore.sections as section (section.category.key)}
         <div class="bg-white rounded-xl">
           <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.category.key}</h3>
           {#if section.rows.length === 0}
-            <p class="text-sm text-gray-400">No files</p>
+            <p class="text-sm text-gray-400">{i18n.t('files.noFiles')}</p>
           {:else if section.tabular}
             <div class="overflow-x-auto">
               <table class="w-full table-fixed">
@@ -51,12 +52,12 @@
                 </colgroup>
                 <thead>
                   <tr class="border-b border-gray-200">
-                    <th class="th">Issue Date</th>
+                    <th class="th">{i18n.t('files.issueDate')}</th>
                     <th class="th">{section.counterpartyHeader}</th>
-                    <th class="th text-right">Gross</th>
-                    <th class="th text-right">VAT</th>
-                    <th class="th text-center">Preview</th>
-                    <th class="th text-right">Remove</th>
+                    <th class="th text-right">{i18n.t('files.gross')}</th>
+                    <th class="th text-right">{i18n.t('files.vat')}</th>
+                    <th class="th text-center">{i18n.t('files.preview')}</th>
+                    <th class="th text-right">{i18n.t('files.remove')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -72,8 +73,8 @@
                             <button
                               type="button"
                               onclick={() => preview.open(row.file.id)}
-                              title="Preview invoice"
-                              aria-label="Preview invoice"
+                              title={i18n.t('files.previewInvoice')}
+                              aria-label={i18n.t('files.previewInvoice')}
                               class="btn btn-icon btn-ghost"
                             >
                               <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
@@ -86,8 +87,8 @@
                           type="button"
                           onclick={() => filesStore.remove(row.file)}
                           disabled={row.removing}
-                          title="Remove from Drive"
-                          aria-label="Remove from Drive"
+                          title={i18n.t('files.removeFromDrive')}
+                          aria-label={i18n.t('files.removeFromDrive')}
                           class="btn btn-icon btn-danger"
                         >
                           <Icon src={Trash} class="w-4 h-4" />
@@ -110,8 +111,8 @@
                     <button
                       type="button"
                       onclick={() => preview.open(row.file.id)}
-                      title="Preview invoice"
-                      aria-label="Preview invoice"
+                      title={i18n.t('files.previewInvoice')}
+                      aria-label={i18n.t('files.previewInvoice')}
                       class="btn btn-icon btn-ghost"
                     >
                       <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />

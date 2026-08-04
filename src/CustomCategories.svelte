@@ -1,8 +1,9 @@
 <script lang="ts">
   import { Icon, ChevronDown, ChevronUp, Plus, Trash } from 'svelte-hero-icons'
-  import { CATEGORY_KINDS, kindLabel, type CategoryKind } from './app/categories'
+  import { categoryKinds, kindLabel, type CategoryKind } from './app/categories'
   import { categoriesStore } from './app/categoriesStore.svelte'
   import { CustomCategoriesPage } from './app/customCategories.svelte'
+  import { i18n } from './app/i18n.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
   import Spinner from './Spinner.svelte'
 
@@ -13,6 +14,7 @@
   }
 
   const page = new CustomCategoriesPage()
+  const kinds = $derived(categoryKinds())
 
   function submit(e: SubmitEvent) {
     e.preventDefault()
@@ -21,7 +23,7 @@
 </script>
 
 {#snippet moveButton(key: string, direction: 'up' | 'down', disabled: boolean)}
-  {@const label = direction === 'up' ? 'Move up' : 'Move down'}
+  {@const label = direction === 'up' ? i18n.t('customCategories.moveUp') : i18n.t('customCategories.moveDown')}
   <button
     type="button"
     onclick={() => categoriesStore.move(key, direction)}
@@ -36,14 +38,12 @@
 
 <div class="bg-white rounded-xl">
   <div class="mb-6">
-    <h2 class="text-3xl font-bold text-gray-900 mb-2">Custom categories</h2>
+    <h2 class="text-3xl font-bold text-gray-900 mb-2">{i18n.t('customCategories.title')}</h2>
   </div>
 
   <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
     <p class="text-sm text-blue-600">
-      Adding a category creates its folder in every month that already exists.
-      Removing one deletes those folders and the files inside them; invoices
-      filed there go back to pending so you can re-file them elsewhere.
+      {i18n.t('customCategories.info')}
     </p>
   </div>
 
@@ -57,7 +57,7 @@
         <div class="flex-1 min-w-0">
           <p class="text-sm font-semibold text-gray-900 truncate">{category.key}</p>
         </div>
-        <span class="text-xs text-gray-500 flex-shrink-0">Category:</span>
+        <span class="text-xs text-gray-500 flex-shrink-0">{i18n.t('customCategories.category')}</span>
         <span class="px-2 py-0.5 text-xs font-semibold rounded-full {KIND_BADGES[category.kind]}">
           {kindLabel(category.kind)}
         </span>
@@ -65,8 +65,8 @@
           type="button"
           onclick={() => page.remove(category.key)}
           disabled={categoriesStore.saving}
-          title="Remove category"
-          aria-label="Remove category"
+          title={i18n.t('customCategories.removeCategory')}
+          aria-label={i18n.t('customCategories.removeCategory')}
           class="btn btn-icon btn-danger"
         >
           <Icon src={Trash} class="w-4 h-4" />
@@ -77,20 +77,20 @@
 
   <form onsubmit={submit} class="flex flex-wrap gap-3 items-end">
     <div class="flex-1 min-w-[12rem]">
-      <label for="categoryName" class="block text-sm font-semibold text-gray-900 mb-2">New category</label>
+      <label for="categoryName" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('customCategories.newCategory')}</label>
       <input
         id="categoryName"
         type="text"
         bind:value={page.name}
-        placeholder="e.g. Umowy"
+        placeholder={i18n.t('customCategories.namePlaceholder')}
         class="field w-full"
         disabled={categoriesStore.saving}
       />
     </div>
     <div>
-      <label for="categoryKind" class="block text-sm font-semibold text-gray-900 mb-2">Type</label>
+      <label for="categoryKind" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('customCategories.type')}</label>
       <select id="categoryKind" bind:value={page.kind} class="field" disabled={categoriesStore.saving}>
-        {#each CATEGORY_KINDS as option (option.value)}
+        {#each kinds as option (option.value)}
           <option value={option.value}>{option.label}</option>
         {/each}
       </select>
@@ -98,10 +98,10 @@
     <button type="submit" disabled={categoriesStore.saving} class="btn btn-primary">
       {#if categoriesStore.saving}
         <Spinner variant="inline" />
-        Saving...
+        {i18n.t('customCategories.saving')}
       {:else}
         <Icon src={Plus} class="w-5 h-5 mr-2" />
-        Add
+        {i18n.t('customCategories.add')}
       {/if}
     </button>
   </form>
@@ -114,11 +114,9 @@
     {@const removal = categoriesStore.lastRemoval}
     <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <p class="text-sm text-amber-800">
-        <strong>{removal.name}</strong> removed: {removal.folders} folder(s) and
-        {removal.files} file(s) deleted from Google Drive.
+        {i18n.t('customCategories.removed', { name: removal.name, folders: removal.folders, files: removal.files })}
         {#if removal.unfiled > 0}
-          {removal.unfiled} invoice(s) are pending again — re-approve them on the Invoices page
-          to file them under another category.
+          {i18n.t('customCategories.removalUnfiled', { n: removal.unfiled })}
         {/if}
       </p>
     </div>

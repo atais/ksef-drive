@@ -15,6 +15,7 @@ import { deleteFileByName, readJsonFile, writeJsonFile } from '../gdrive/driveAp
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
+import { i18n } from './i18n.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
@@ -65,7 +66,7 @@ export class Session {
   // check lives here rather than once per store.
   requireDrive(): DriveContext {
     const { accessToken, rootFolderId, configFolderId } = this
-    if (!accessToken || !rootFolderId || !configFolderId) throw new Error('Connect Google Drive first')
+    if (!accessToken || !rootFolderId || !configFolderId) throw new Error(i18n.t('session.connectDriveFirst'))
     return { accessToken, rootFolderId, configFolderId }
   }
 
@@ -73,12 +74,12 @@ export class Session {
   // read or rewrite, and an empty NIP would silently load an empty one.
   requireNip(): string {
     const nip = this.ksefCredentials?.nip
-    if (!nip) throw new Error('Connect KSeF first')
+    if (!nip) throw new Error(i18n.t('session.connectKsefFirst'))
     return nip
   }
 
   requireKsefSession(): string {
-    if (!this.ksefSessionToken) throw new Error('Not connected to KSEF')
+    if (!this.ksefSessionToken) throw new Error(i18n.t('session.notConnectedKsef'))
     return this.ksefSessionToken
   }
 
@@ -181,7 +182,7 @@ export class Session {
   // Saves credentials to Drive, then immediately tries them against KSeF.
   async saveKsefCredentials(credentials: KsefCredentials) {
     if (!this.accessToken || !this.configFolderId || !this.user) {
-      throw new Error('Not connected to Google Drive')
+      throw new Error(i18n.t('session.notConnectedDrive'))
     }
 
     this.savingCredentials = true

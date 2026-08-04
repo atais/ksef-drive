@@ -1,41 +1,42 @@
 <script lang="ts">
   import { Icon, ArrowPath, Eye, AdjustmentsHorizontal, CloudArrowUp, ShieldCheck } from 'svelte-hero-icons'
   import { session } from './app/session.svelte'
+  import { i18n } from './app/i18n.svelte'
   import Footer from './Footer.svelte'
 
-  const FEATURES = [
+  const FEATURES = $derived([
     {
       icon: ArrowPath,
-      title: 'Synchronizuj faktury z KSEF',
-      description: 'Faktury z KSEF pobierane są automatycznie, bez ręcznego eksportu.',
+      title: i18n.t('landing.feature1.title'),
+      description: i18n.t('landing.feature1.description'),
       bg: 'blue',
     },
     {
       icon: Eye,
-      title: 'Łatwo przeglądaj faktury z danego okresu',
-      description: 'Wybierz miesiąc i od razu zobacz wszystkie faktury z tego okresu.',
+      title: i18n.t('landing.feature2.title'),
+      description: i18n.t('landing.feature2.description'),
       screenshot: 'shot1.png',
       bg: 'yellow',
     },
     {
       icon: AdjustmentsHorizontal,
-      title: 'Filtruj i kategoryzuj wg upodobania',
-      description: 'Twórz własne kategorie, dopasowane do sposobu, w jaki rozliczasz się z faktur.',
+      title: i18n.t('landing.feature3.title'),
+      description: i18n.t('landing.feature3.description'),
       bg: 'green',
     },
     {
       icon: CloudArrowUp,
-      title: 'Utrzymuj kopię na Google Drive',
-      description: 'Każda faktura trafia do odpowiedniego folderu roku i miesiąca na Twoim Drive.',
+      title: i18n.t('landing.feature4.title'),
+      description: i18n.t('landing.feature4.description'),
       bg: 'blue',
     },
     {
       icon: ShieldCheck,
-      title: 'Twoje dane zostają u Ciebie',
-      description: 'Aplikacja nie ma dostępu do Twoich danych — wszystko odbywa się w Twojej przeglądarce.',
+      title: i18n.t('landing.feature5.title'),
+      description: i18n.t('landing.feature5.description'),
       bg: 'yellow',
     },
-  ]
+  ])
 
   // Google Drive brand palette.
   const SECTION_BG: Record<string, string> = { blue: 'bg-[#2684FC]', yellow: 'bg-[#FFBA00]', green: 'bg-[#00AC47]' }
@@ -54,12 +55,11 @@
       <img src="{import.meta.env.BASE_URL}drive.png" alt="Google Drive" class="w-10 h-10" />
     </div>
     <h1 class="mx-auto max-w-3xl text-5xl sm:text-6xl font-bold tracking-tight text-gray-900">
-      KSEF drive
+      {i18n.t('landing.title')}
     </h1>
 
     <p class="mx-auto mt-6 max-w-xl text-lg text-gray-600">
-      Faktury z KSEF, uporządkowane i skopiowane na Twój Google Drive.
-      Jedno miejsce do przeglądania, kategoryzowania i rozliczania.
+      {i18n.t('landing.subtitle')}
     </p>
 
     <div class="mt-10">
@@ -74,7 +74,7 @@
           <path fill="#4CAF50" d="M24 44c5.5 0 10.5-2.1 14.3-5.5l-6.6-5.6C29.6 34.7 26.9 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z" />
           <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C41.6 36.3 44 30.6 44 24c0-1.3-.1-2.7-.4-3.5z" />
         </svg>
-        Zaloguj się przez Google
+        {i18n.t('landing.login')}
       </button>
     </div>
 
@@ -103,7 +103,7 @@
             />
           {:else}
             <div class="w-full min-h-[16rem] rounded-xl shadow-xl shadow-gray-900/10 flex items-center justify-center bg-white">
-              <p class="text-gray-400 text-sm py-20">Zrzut ekranu do uzupełnienia</p>
+              <p class="text-gray-400 text-sm py-20">{i18n.t('landing.screenshotPlaceholder')}</p>
             </div>
           {/if}
         </div>

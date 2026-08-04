@@ -19,6 +19,7 @@ import {
   type Category,
   type CategoryKind,
 } from './categories'
+import { i18n } from './i18n.svelte'
 import { ksefNumberFromFilename } from './invoiceFiling'
 import { invoicesDb } from './invoicesDbStore.svelte'
 import { session, type DriveContext } from './session.svelte'
@@ -61,7 +62,7 @@ export class CategoriesStore {
   }
 
   private mutate(next: Category[], driveWork: (drive: DriveContext) => Promise<void>) {
-    return this.task.run('Failed to update categories', async () => {
+    return this.task.run(i18n.t('categoriesStore.failedUpdate'), async () => {
       const drive = session.requireDrive()
       await driveWork(drive)
       await saveCategories(drive.accessToken, drive.configFolderId, next)
@@ -73,7 +74,7 @@ export class CategoriesStore {
   // since the deletion takes the files with the folders. A failure here is
   // reported like any other: null means "couldn't tell", not "none".
   async countFiles(key: string): Promise<number | null> {
-    const count = await this.task.run('Failed to count files', () => {
+    const count = await this.task.run(i18n.t('categoriesStore.failedCount'), () => {
       const { accessToken, rootFolderId } = session.requireDrive()
       return countCategoryFiles(accessToken, rootFolderId, key)
     })

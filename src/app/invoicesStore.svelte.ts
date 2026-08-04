@@ -8,6 +8,7 @@ import { kindForRole, resolveCategory, type Category } from './categories'
 import { confirmAction } from './confirm.svelte'
 import { isoDate, isoMonthsAgo, maxToDate, monthOptionsForDate } from './dates'
 import { counterpartyName, formatAmount } from './invoiceDisplay'
+import { i18n } from './i18n.svelte'
 import {
   fileInvoice,
   invoiceMonthKey,
@@ -24,12 +25,14 @@ import { TaskState } from './task.svelte'
 
 export type StatusFilter = 'pending' | 'added' | 'ignored' | 'all'
 
-export const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'added', label: 'Added' },
-  { value: 'ignored', label: 'Ignored' },
-  { value: 'all', label: 'All' },
-]
+export function statusFilters(): { value: StatusFilter; label: string }[] {
+  return [
+    { value: 'pending', label: i18n.t('status.pending') },
+    { value: 'added', label: i18n.t('status.added') },
+    { value: 'ignored', label: i18n.t('status.ignored') },
+    { value: 'all', label: i18n.t('status.all') },
+  ]
+}
 
 // Everything one table row shows or acts on, worked out here so the markup
 // only has to place it.
@@ -80,8 +83,12 @@ export class InvoicesStore {
 
   // The two action columns swap meaning with the filter: on the "added" list
   // the only thing to do is take an invoice back off Drive.
-  readonly acceptColumnLabel = $derived(this.statusFilter === 'added' ? 'Remove' : 'Approve')
-  readonly ignoreColumnLabel = $derived(this.statusFilter === 'ignored' ? 'Restore' : 'Ignore')
+  readonly acceptColumnLabel = $derived(
+    this.statusFilter === 'added' ? i18n.t('invoices.acceptColumn.added') : i18n.t('invoices.acceptColumn.default')
+  )
+  readonly ignoreColumnLabel = $derived(
+    this.statusFilter === 'ignored' ? i18n.t('invoices.ignoreColumn.ignored') : i18n.t('invoices.ignoreColumn.default')
+  )
 
   private toRow(entry: InvoiceDbEntry): InvoiceRow {
     const invoice = entry.metadata
@@ -126,7 +133,7 @@ export class InvoicesStore {
     { monthKey = entry.monthKey, category }: { monthKey?: string; category?: string } = {}
   ): FilingTarget {
     const folder = category ?? entry.category
-    if (!folder) throw new Error('Invoice is not filed under any category')
+    if (!folder) throw new Error(i18n.t('invoices.notFiled'))
     return { rootFolderId, monthKey, category: folder }
   }
 
@@ -139,7 +146,7 @@ export class InvoicesStore {
   }
 
   load() {
-    return this.task.run('Failed to load invoices DB', () => invoicesDb.load())
+    return this.task.run(i18n.t('invoices.failedLoadDb'), () => invoicesDb.load())
   }
 
   // Extends the local DB with invoices from KSeF for the selected date range,
@@ -147,7 +154,7 @@ export class InvoicesStore {
   // always reflects DB state, and existing filing decisions are preserved.
   async sync() {
     this.syncing = true
-    await this.task.run('Failed to sync invoices', async () => {
+    await this.task.run(i18n.t('invoices.failedSync'), async () => {
       const sessionToken = session.requireKsefSession()
       const fetched = await queryAllInvoicesMetadata(sessionToken, {
         dateType: this.dateType,
@@ -181,13 +188,13 @@ export class InvoicesStore {
     const { entry, category } = row
     const ksefNumber = entry.metadata.ksefNumber
     await this.task.run(
-      'Failed to file invoice',
+      i18n.t('invoices.failedFile'),
       async () => {
         const { accessToken, rootFolderId } = session.requireDrive()
         const sessionToken = session.requireKsefSession()
         // Resolve now: this is where the pending pick (or the default for the
         // role) becomes the category the entry records.
-        if (!category) throw new Error('No category to file this invoice into')
+        if (!category) throw new Error(i18n.t('invoices.noCategoryToFile'))
         await fileInvoice(
           accessToken,
           sessionToken,
@@ -203,15 +210,15 @@ export class InvoicesStore {
   async unaccept(entry: InvoiceDbEntry) {
     const ksefNumber = entry.metadata.ksefNumber
     const confirmed = await confirmAction({
-      title: 'Remove this invoice from Google Drive?',
+      title: i18n.t('invoices.removeConfirmTitle'),
       details: [`Its XML in ${entry.category} will be deleted; the invoice goes back to pending.`],
-      confirmLabel: 'Remove',
+      confirmLabel: i18n.t('invoices.removeConfirmLabel'),
       danger: true,
     })
     if (!confirmed) return
 
     await this.task.run(
-      'Failed to remove filed invoice',
+      i18n.t('invoices.failedRemove'),
       async () => {
         const { accessToken, rootFolderId } = session.requireDrive()
         await unfileInvoice(accessToken, ksefNumber, this.filingTarget(entry, rootFolderId))
@@ -230,16 +237,16 @@ export class InvoicesStore {
     const ksefNumber = entry.metadata.ksefNumber
     if (entry.accepted) {
       const confirmed = await confirmAction({
-        title: 'Ignore this invoice?',
+        title: i18n.t('invoices.ignoreConfirmTitle'),
         details: [`It is filed in ${entry.category}; that XML will be deleted from Google Drive.`],
-        confirmLabel: 'Ignore',
+        confirmLabel: i18n.t('invoices.ignoreConfirmLabel'),
         danger: true,
       })
       if (!confirmed) return
     }
 
     await this.task.run(
-      'Failed to ignore invoice',
+      i18n.t('invoices.failedIgnore'),
       async () => {
         if (entry.accepted) {
           const { accessToken, rootFolderId } = session.requireDrive()
@@ -254,7 +261,7 @@ export class InvoicesStore {
 
   async restore(entry: InvoiceDbEntry) {
     await this.task.run(
-      'Failed to restore invoice',
+      i18n.t('invoices.failedRestore'),
       () => invoicesDb.save({ ...entry, ignored: false }),
       entry.metadata.ksefNumber
     )
@@ -268,7 +275,7 @@ export class InvoicesStore {
     if (monthKey === entry.monthKey && category === entry.category) return
 
     await this.task.run(
-      'Failed to move filed invoice',
+      i18n.t('invoices.failedMove'),
       async () => {
         if (entry.accepted) {
           const { accessToken, rootFolderId } = session.requireDrive()

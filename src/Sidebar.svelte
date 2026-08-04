@@ -3,6 +3,7 @@
   import { folderTree } from './app/folderTree.svelte'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
+  import { i18n } from './app/i18n.svelte'
 
   $effect(() => {
     // Re-read the tree whenever the Drive connection changes.
@@ -20,9 +21,9 @@
 >
   <nav>
     {#if folderTree.loading && folderTree.years.length === 0}
-      <p class="text-sm text-gray-400 px-4 py-3">Loading folders...</p>
+      <p class="text-sm text-gray-400 px-4 py-3">{i18n.t('sidebar.loadingFolders')}</p>
     {:else if folderTree.years.length === 0}
-      <p class="text-sm text-gray-400 px-4 py-3">No folders yet</p>
+      <p class="text-sm text-gray-400 px-4 py-3">{i18n.t('sidebar.noFolders')}</p>
     {:else}
       <ul>
         {#each folderTree.years as year (year.id)}

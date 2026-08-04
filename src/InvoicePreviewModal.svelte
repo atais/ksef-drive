@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Icon, XMark } from 'svelte-hero-icons'
   import type { InvoicePreview } from './app/invoicePreview.svelte'
+  import { i18n } from './app/i18n.svelte'
   import { parseInvoiceXml, type ParsedInvoice } from './ksef/invoiceXmlParser'
 
   interface Props {
@@ -38,7 +39,7 @@
     <button
       type="button"
       onclick={onClose}
-      aria-label="Close"
+      aria-label={i18n.t('preview.close')}
       class="btn btn-icon btn-ghost absolute top-2 right-2"
     >
       <Icon src={XMark} class="w-5 h-5" />
@@ -46,31 +47,31 @@
 
     <div class="p-6">
       {#if preview.loading}
-        <p class="text-gray-600 text-sm text-center py-8">Loading invoice…</p>
+        <p class="text-gray-600 text-sm text-center py-8">{i18n.t('preview.loading')}</p>
       {:else if preview.error}
         <p class="text-red-700 text-sm text-center py-8">{preview.error}</p>
       {:else if invoice}
         <div class="text-center mb-4">
-          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Faktura {invoice.formCode ?? ''}</p>
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">{i18n.t('preview.invoice')} {invoice.formCode ?? ''}</p>
           <p class="text-lg font-bold text-gray-900">{invoice.invoiceNumber}</p>
           <p class="text-xs text-gray-500">
-            Issued {invoice.issueDate ?? '-'}{invoice.placeOfIssue ? `, ${invoice.placeOfIssue}` : ''}
+            {i18n.t('preview.issued')} {invoice.issueDate ?? '-'}{invoice.placeOfIssue ? `, ${invoice.placeOfIssue}` : ''}
           </p>
         </div>
 
         <div class="grid grid-cols-2 gap-6 mb-6">
           <div>
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Seller</p>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{i18n.t('preview.seller')}</p>
             <p class="text-sm font-medium text-gray-900">{invoice.seller.name}</p>
-            <p class="text-sm text-gray-600">NIP: {invoice.seller.nip}</p>
+            <p class="text-sm text-gray-600">{i18n.t('preview.nip')}: {invoice.seller.nip}</p>
             {#if invoice.seller.address}<p class="text-sm text-gray-600">{invoice.seller.address}</p>{/if}
             {#if invoice.seller.email}<p class="text-sm text-gray-600">{invoice.seller.email}</p>{/if}
             {#if invoice.seller.phone}<p class="text-sm text-gray-600">{invoice.seller.phone}</p>{/if}
           </div>
           <div>
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Buyer</p>
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{i18n.t('preview.buyer')}</p>
             <p class="text-sm font-medium text-gray-900">{invoice.buyer.name}</p>
-            <p class="text-sm text-gray-600">NIP: {invoice.buyer.nip}</p>
+            <p class="text-sm text-gray-600">{i18n.t('preview.nip')}: {invoice.buyer.nip}</p>
             {#if invoice.buyer.address}<p class="text-sm text-gray-600">{invoice.buyer.address}</p>{/if}
           </div>
         </div>
@@ -79,11 +80,11 @@
           <thead>
             <tr class="border-b border-gray-200">
               <th class="text-left py-2 font-semibold text-gray-600">#</th>
-              <th class="text-left py-2 font-semibold text-gray-600">Item</th>
-              <th class="text-right py-2 font-semibold text-gray-600">Qty</th>
-              <th class="text-right py-2 font-semibold text-gray-600">Unit price</th>
-              <th class="text-right py-2 font-semibold text-gray-600">Net</th>
-              <th class="text-right py-2 font-semibold text-gray-600">VAT %</th>
+              <th class="text-left py-2 font-semibold text-gray-600">{i18n.t('preview.item')}</th>
+              <th class="text-right py-2 font-semibold text-gray-600">{i18n.t('preview.qty')}</th>
+              <th class="text-right py-2 font-semibold text-gray-600">{i18n.t('preview.unitPrice')}</th>
+              <th class="text-right py-2 font-semibold text-gray-600">{i18n.t('preview.net')}</th>
+              <th class="text-right py-2 font-semibold text-gray-600">{i18n.t('preview.vatPercent')}</th>
             </tr>
           </thead>
           <tbody>
@@ -103,15 +104,15 @@
         <div class="flex justify-end mb-6">
           <div class="w-64 space-y-1 text-sm">
             <div class="flex justify-between">
-              <span class="text-gray-600">Net</span>
+              <span class="text-gray-600">{i18n.t('preview.net')}</span>
               <span class="text-gray-900">{invoice.netTotal} {invoice.currency}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-gray-600">VAT</span>
+              <span class="text-gray-600">{i18n.t('files.vat')}</span>
               <span class="text-gray-900">{invoice.vatTotal} {invoice.currency}</span>
             </div>
             <div class="flex justify-between font-semibold border-t border-gray-200 pt-1">
-              <span class="text-gray-900">Gross</span>
+              <span class="text-gray-900">{i18n.t('preview.gross')}</span>
               <span class="text-gray-900">{invoice.grossTotal} {invoice.currency}</span>
             </div>
           </div>
@@ -119,8 +120,8 @@
 
         {#if invoice.payment.bankAccount || invoice.payment.dueDate}
           <div class="border-t border-gray-200 pt-4">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Payment</p>
-            {#if invoice.payment.dueDate}<p class="text-sm text-gray-600">Due: {invoice.payment.dueDate}</p>{/if}
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{i18n.t('preview.payment')}</p>
+            {#if invoice.payment.dueDate}<p class="text-sm text-gray-600">{i18n.t('preview.due')}: {invoice.payment.dueDate}</p>{/if}
             {#if invoice.payment.bankAccount}
               <p class="text-sm text-gray-600">
                 {invoice.payment.bankAccount} {invoice.payment.bankName ? `(${invoice.payment.bankName})` : ''}

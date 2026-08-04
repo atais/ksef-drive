@@ -1,13 +1,16 @@
 <script lang="ts">
   import { Icon, Bars3, ArrowPath } from 'svelte-hero-icons'
-  import { navigation, NAV_ITEMS } from './app/navigation.svelte'
+  import { navigation, navItems } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
+  import { i18n } from './app/i18n.svelte'
+
+  const NAV_ITEMS = $derived(navItems())
 </script>
 
 <header class="w-full border-b border-gray-200 bg-white sticky top-0 z-50">
   <div class="flex h-16">
     <div class="flex items-center gap-3 px-4 sm:px-6 w-full md:w-64 flex-shrink-0 border-r border-gray-200">
-      <button onclick={() => navigation.toggleSidebar()} class="p-2 md:hidden text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Toggle sidebar">
+      <button onclick={() => navigation.toggleSidebar()} class="p-2 md:hidden text-gray-600 hover:bg-gray-100 rounded-lg" aria-label={i18n.t('header.toggleSidebar')}>
         <Icon src={Bars3} class="w-6 h-6" />
       </button>
       <div class="flex items-center gap-2">
@@ -30,14 +33,14 @@
       </nav>
 
       <div class="flex items-center gap-4 px-4 sm:px-6 flex-shrink-0">
-        <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500" title={session.driveSyncing ? 'Syncing with Google Drive' : 'Google Drive up to date'}>
+        <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-500" title={session.driveSyncing ? i18n.t('header.syncingTooltip') : i18n.t('header.driveSyncedTooltip')}>
           <Icon src={ArrowPath} class="w-3.5 h-3.5 {session.driveSyncing ? 'animate-spin' : ''}" />
-          <span>{session.driveSyncing ? 'Syncing Drive...' : 'Drive synced'}</span>
+          <span>{session.driveSyncing ? i18n.t('header.syncing') : i18n.t('header.driveSynced')}</span>
         </div>
         <div class="hidden sm:flex items-center gap-3">
-          <div class="flex items-center gap-1.5 text-xs text-gray-500" title={session.isConnected ? 'KSEF connected' : 'KSEF connection issues'}>
+          <div class="flex items-center gap-1.5 text-xs text-gray-500" title={session.isConnected ? i18n.t('header.ksefConnectedTooltip') : i18n.t('header.ksefIssuesTooltip')}>
             <span class="w-2.5 h-2.5 rounded-full {session.isConnected ? 'bg-green-500' : 'bg-red-500'}"></span>
-            <span>KSEF</span>
+            <span>{i18n.t('nav.ksef')}</span>
           </div>
           <div class="flex flex-col items-end">
             <p class="text-sm font-semibold text-gray-900">{session.user.name}</p>
@@ -45,13 +48,13 @@
           </div>
         </div>
         <button onclick={() => session.logout()} class="btn btn-sm btn-danger">
-          Logout
+          {i18n.t('header.logout')}
         </button>
       </div>
     {:else}
       <div class="flex items-center justify-end flex-1 px-4 sm:px-6">
         <button onclick={() => session.login()} class="btn btn-sm btn-primary">
-          Login
+          {i18n.t('header.login')}
         </button>
       </div>
     {/if}

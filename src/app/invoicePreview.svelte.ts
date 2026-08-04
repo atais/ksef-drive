@@ -6,6 +6,7 @@
 import { downloadFileText } from '../gdrive/driveApi'
 import { downloadInvoiceXml } from '../ksef/invoiceApi'
 import { errorMessage } from './errors'
+import { i18n } from './i18n.svelte'
 import { session } from './session.svelte'
 
 export class InvoicePreview {
@@ -32,7 +33,7 @@ export class InvoicePreview {
       // Ignore a slow load whose modal has already been closed or replaced.
       if (this.openId === id) this.xml = xml
     } catch (error) {
-      if (this.openId === id) this.error = errorMessage(error, 'Failed to load invoice')
+      if (this.openId === id) this.error = errorMessage(error, i18n.t('preview.failedLoadInvoice'))
     } finally {
       if (this.openId === id) this.loading = false
     }

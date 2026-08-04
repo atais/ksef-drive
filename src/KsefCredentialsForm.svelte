@@ -3,6 +3,7 @@
   import { CredentialsForm, type PemField } from './app/credentialsForm.svelte'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
+  import { i18n } from './app/i18n.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
   import Spinner from './Spinner.svelte'
   import type { KsefCredentials } from './ksef/ksefAuth'
@@ -34,21 +35,18 @@
 <div class="bg-white rounded-xl">
   <div class="mb-6">
     <h2 class="text-3xl font-bold text-gray-900 mb-2">
-      KSEF Settings
+      {i18n.t('credentials.title')}
     </h2>
     <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
       <p class="text-sm text-blue-600">
-        Credentials are stored in your Google Drive .config folder.
-        The private key is only used client-side in your browser to sign the KSEF
-        authentication request — it is never sent to any server except KSEF itself
-        embedded in the signed XML. Only RSA keys are currently supported.
+        {i18n.t('credentials.info')}
       </p>
     </div>
   </div>
 
   <form onsubmit={handleSubmit} class="space-y-6">
     <div>
-      <label for="nip" class="block text-sm font-semibold text-gray-900 mb-2">NIP</label>
+      <label for="nip" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('credentials.nip')}</label>
       <input
         id="nip"
         type="text"
@@ -61,7 +59,7 @@
     </div>
 
     <div>
-      <label for="cert" class="block text-sm font-semibold text-gray-900 mb-2">Certificate (.crt / .pem)</label>
+      <label for="cert" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('credentials.certificate')}</label>
       <input
         id="cert"
         type="file"
@@ -71,14 +69,14 @@
         disabled={session.savingCredentials}
       />
       {#if form.certPem}
-        <p class="text-sm text-green-600 mt-2">{form.isEdit ? 'New certificate loaded' : 'Certificate loaded'}</p>
+        <p class="text-sm text-green-600 mt-2">{form.isEdit ? i18n.t('credentials.newCertLoaded') : i18n.t('credentials.certLoaded')}</p>
       {:else if form.isEdit}
-        <p class="text-sm text-gray-500 mt-2">Current certificate is saved. Upload a new one to replace it.</p>
+        <p class="text-sm text-gray-500 mt-2">{i18n.t('credentials.certSavedHint')}</p>
       {/if}
     </div>
 
     <div>
-      <label for="key" class="block text-sm font-semibold text-gray-900 mb-2">Private Key (.key)</label>
+      <label for="key" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('credentials.privateKey')}</label>
       <input
         id="key"
         type="file"
@@ -88,20 +86,20 @@
         disabled={session.savingCredentials}
       />
       {#if form.keyPem}
-        <p class="text-sm text-green-600 mt-2">{form.isEdit ? 'New private key loaded' : 'Private key loaded'}</p>
+        <p class="text-sm text-green-600 mt-2">{form.isEdit ? i18n.t('credentials.newKeyLoaded') : i18n.t('credentials.keyLoaded')}</p>
       {:else if form.isEdit}
-        <p class="text-sm text-gray-500 mt-2">Current private key is saved. Upload a new one to replace it.</p>
+        <p class="text-sm text-gray-500 mt-2">{i18n.t('credentials.keySavedHint')}</p>
       {/if}
     </div>
 
     <div>
-      <label for="keyPassword" class="block text-sm font-semibold text-gray-900 mb-2">Private Key Password</label>
+      <label for="keyPassword" class="block text-sm font-semibold text-gray-900 mb-2">{i18n.t('credentials.keyPassword')}</label>
       <input
         id="keyPassword"
         type="password"
         value={form.keyPassword}
         oninput={(e) => (form.keyPassword = (e.target as HTMLInputElement).value)}
-        placeholder={form.isEdit ? 'Leave empty to keep current password' : 'Password protecting the private key'}
+        placeholder={form.isEdit ? i18n.t('credentials.keyPasswordPlaceholderEdit') : i18n.t('credentials.keyPasswordPlaceholderNew')}
         class="field w-full"
         disabled={session.savingCredentials}
       />
@@ -116,11 +114,11 @@
     >
       {#if session.savingCredentials}
         <Spinner variant="inline" />
-        Saving...
+        {i18n.t('credentials.saving')}
       {:else if form.isEdit}
-        Save Changes
+        {i18n.t('credentials.saveChanges')}
       {:else}
-        Save Configuration
+        {i18n.t('credentials.saveConfiguration')}
       {/if}
     </button>
   </form>
@@ -128,9 +126,7 @@
   {#if !form.isEdit}
     <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
       <p class="text-sm text-amber-800">
-        <strong>Certificate requirements:</strong> a qualified certificate (personal or
-        company seal) or a KSEF certificate whose subject contains your NIP or PESEL,
-        with an RSA private key. Only RSA keys are currently supported.
+        <strong>{i18n.t('credentials.requirementsTitle')}</strong> {i18n.t('credentials.requirementsText')}
       </p>
     </div>
   {/if}

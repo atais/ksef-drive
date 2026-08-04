@@ -1,5 +1,6 @@
 <script lang="ts">
   import { confirmDialog } from './app/confirm.svelte'
+  import { i18n } from './app/i18n.svelte'
 
   const request = $derived(confirmDialog.request)
 
@@ -33,14 +34,14 @@
 
       <div class="mt-6 flex justify-end gap-3">
         <button type="button" onclick={() => confirmDialog.answer(false)} class="btn btn-sm btn-ghost">
-          Cancel
+          {i18n.t('confirm.cancel')}
         </button>
         <button
           type="button"
           onclick={() => confirmDialog.answer(true)}
           class="btn btn-sm {request.danger ? 'btn-danger' : 'btn-primary'}"
         >
-          {request.confirmLabel ?? 'Confirm'}
+          {request.confirmLabel ?? i18n.t('confirm.confirm')}
         </button>
       </div>
     </div>

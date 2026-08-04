@@ -1,13 +1,15 @@
 <script lang="ts">
   import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
   import { ksefPreview } from './app/invoicePreview.svelte'
-  import { InvoicesStore, STATUS_FILTERS, type StatusFilter } from './app/invoicesStore.svelte'
+  import { InvoicesStore, statusFilters, type StatusFilter } from './app/invoicesStore.svelte'
+  import { i18n } from './app/i18n.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
   import InvoicePreviewModal from './InvoicePreviewModal.svelte'
   import Spinner from './Spinner.svelte'
 
   const store = new InvoicesStore()
   const preview = ksefPreview()
+  const STATUS_FILTERS = $derived(statusFilters())
 
   void store.load()
 </script>
@@ -15,7 +17,7 @@
 <div class="bg-white rounded-xl">
   <div class="flex flex-wrap gap-4 mb-6 items-end">
     <div>
-      <label for="from" class="block text-xs font-semibold text-gray-600 mb-1">From</label>
+      <label for="from" class="block text-xs font-semibold text-gray-600 mb-1">{i18n.t('invoices.from')}</label>
       <input
         id="from"
         type="date"
@@ -25,7 +27,7 @@
       />
     </div>
     <div>
-      <label for="to" class="block text-xs font-semibold text-gray-600 mb-1">To (optional)</label>
+      <label for="to" class="block text-xs font-semibold text-gray-600 mb-1">{i18n.t('invoices.to')}</label>
       <input
         id="to"
         type="date"
@@ -40,7 +42,7 @@
       disabled={store.syncing || store.loadingDb}
       class="btn btn-sm btn-primary"
     >
-      {store.syncing ? 'Syncing...' : 'Sync'}
+      {store.syncing ? i18n.t('invoices.syncing') : i18n.t('invoices.sync')}
     </button>
     <div class="inline-flex rounded-lg border border-gray-300 overflow-hidden ml-auto">
       {#each STATUS_FILTERS as option (option.value)}
@@ -62,23 +64,23 @@
   </div>
 
   {#if store.loadingDb}
-    <Spinner label="Loading invoices..." />
+    <Spinner label={i18n.t('invoices.loading')} />
   {:else if store.rows.length === 0}
     <div class="text-center py-12">
-      <p class="text-gray-600 font-medium">No invoices yet</p>
-      <p class="text-gray-500 text-sm">Pick a date range and click "Sync" to pull invoices from KSEF</p>
+      <p class="text-gray-600 font-medium">{i18n.t('invoices.noInvoices')}</p>
+      <p class="text-gray-500 text-sm">{i18n.t('invoices.noInvoicesHint')}</p>
     </div>
   {:else}
     <div class="overflow-x-auto">
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-200">
-            <th class="th">Issue Date</th>
-            <th class="th">Entity</th>
-            <th class="th text-right">Gross</th>
-            <th class="th text-right">VAT</th>
-            <th class="th text-center">Preview</th>
-            <th class="th">Category</th>
+            <th class="th">{i18n.t('invoices.issueDate')}</th>
+            <th class="th">{i18n.t('invoices.entity')}</th>
+            <th class="th text-right">{i18n.t('invoices.gross')}</th>
+            <th class="th text-right">{i18n.t('invoices.vat')}</th>
+            <th class="th text-center">{i18n.t('invoices.preview')}</th>
+            <th class="th">{i18n.t('invoices.category')}</th>
             <th class="th text-center">{store.acceptColumnLabel}</th>
             <th class="th text-center">{store.ignoreColumnLabel}</th>
           </tr>
@@ -95,8 +97,8 @@
                   <button
                     type="button"
                     onclick={() => preview.open(row.invoice.ksefNumber)}
-                    title="Preview invoice"
-                    aria-label="Preview invoice"
+                    title={i18n.t('invoices.previewInvoice')}
+                    aria-label={i18n.t('invoices.previewInvoice')}
                     class="btn btn-icon btn-ghost"
                   >
                     <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
@@ -109,7 +111,7 @@
                     <select
                       value={row.category}
                       onchange={(e) => store.setCategory(row.entry, (e.target as HTMLSelectElement).value)}
-                      title="Filing category"
+                      title={i18n.t('invoices.filingCategory')}
                       class="px-2 py-1 text-xs font-semibold rounded-lg border {row.role === 'seller' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}"
                     >
                       {#each row.categoryOptions as option (option.key)}
@@ -119,7 +121,7 @@
                   {:else}
                     <span
                       class="px-2 py-0.5 text-xs font-semibold rounded-full {row.role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
-                      title={`Filed to ${row.category}`}
+                      title={i18n.t('invoices.filedTo', { category: row.category })}
                     >
                       {row.category}
                     </span>
@@ -144,8 +146,8 @@
                       type="button"
                       onclick={() => store.unaccept(row.entry)}
                       disabled={row.saving}
-                      title="Remove from Drive"
-                      aria-label="Remove from Drive"
+                      title={i18n.t('invoices.removeFromDrive')}
+                      aria-label={i18n.t('invoices.removeFromDrive')}
                       class="btn btn-icon btn-danger"
                     >
                       <Icon src={Trash} class="w-4 h-4" />
@@ -155,8 +157,8 @@
                       type="button"
                       onclick={() => store.accept(row)}
                       disabled={row.saving}
-                      title="Add"
-                      aria-label="Add"
+                      title={i18n.t('invoices.add')}
+                      aria-label={i18n.t('invoices.add')}
                       class="btn btn-icon btn-success"
                     >
                       <Icon src={row.saving ? ArrowPath : Check} class="w-4 h-4 {row.saving ? 'animate-spin' : ''}" />
@@ -171,8 +173,8 @@
                       type="button"
                       onclick={() => store.restore(row.entry)}
                       disabled={row.saving}
-                      title="Restore"
-                      aria-label="Restore"
+                      title={i18n.t('invoices.restore')}
+                      aria-label={i18n.t('invoices.restore')}
                       class="btn btn-icon btn-primary"
                     >
                       <Icon src={Eye} class="w-4 h-4" />
@@ -182,8 +184,8 @@
                       type="button"
                       onclick={() => store.ignore(row.entry)}
                       disabled={row.saving}
-                      title="Ignore"
-                      aria-label="Ignore"
+                      title={i18n.t('invoices.ignore')}
+                      aria-label={i18n.t('invoices.ignore')}
                       class="btn btn-icon btn-neutral"
                     >
                       <Icon src={EyeSlash} class="w-4 h-4" />

@@ -6,6 +6,7 @@ import { deleteFile, type DriveFile } from '../gdrive/driveApi'
 import { listMonthCategories, type CategorySection } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
 import { errorMessage } from './errors'
+import { i18n } from './i18n.svelte'
 import { counterpartyName, formatAmount } from './invoiceDisplay'
 import { invoiceRole, isInvoiceXml, ksefNumberFromFilename } from './invoiceFiling'
 import { invoicesDb } from './invoicesDbStore.svelte'
@@ -48,7 +49,7 @@ export class FilesStore {
     this.folders.map((section) => ({
       category: section.category,
       tabular: section.category.kind !== 'other',
-      counterpartyHeader: section.category.kind === 'sold' ? 'To' : 'From',
+      counterpartyHeader: section.category.kind === 'sold' ? i18n.t('files.to') : i18n.t('files.from'),
       rows: section.files.map((file) => this.toRow(file)),
     }))
   )
@@ -88,7 +89,7 @@ export class FilesStore {
         if (!cancelled) this.folders = sections
       })
       .catch((error) => {
-        if (!cancelled) this.task.error = errorMessage(error, 'Failed to load files')
+        if (!cancelled) this.task.error = errorMessage(error, i18n.t('files.failedLoadFiles'))
       })
       .finally(() => {
         if (!cancelled) this.loading = false
@@ -101,7 +102,7 @@ export class FilesStore {
   // in the DB, so it shows back up as pending on the Invoices page.
   async remove(file: DriveFile) {
     await this.task.run(
-      'Failed to remove file',
+      i18n.t('files.failedRemoveFile'),
       async () => {
         const { accessToken } = session.requireDrive()
         await deleteFile(accessToken, file.id)

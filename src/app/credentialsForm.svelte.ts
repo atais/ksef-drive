@@ -5,6 +5,7 @@
 import type { KsefCredentials } from '../ksef/ksefAuth'
 import { isValidNip, NIP_LENGTH, toNipInput } from '../ksef/nip'
 import { errorMessage } from './errors'
+import { i18n } from './i18n.svelte'
 
 // The two PEM fields the form uploads. Same handling for both, so the field
 // is a parameter rather than a pair of near-identical methods.
@@ -57,7 +58,7 @@ export class CredentialsForm {
     const keyPassword = this.keyPassword || this.current?.keyPassword || ''
 
     if (!certPem || !keyPem) {
-      this.error = 'Upload both the certificate (.crt) and the private key (.key)'
+      this.error = i18n.t('credentials.uploadBothError')
       return null
     }
 
@@ -72,7 +73,7 @@ export class CredentialsForm {
     try {
       await save(credentials)
     } catch (error) {
-      this.error = errorMessage(error, 'Save failed')
+      this.error = errorMessage(error, i18n.t('credentials.saveFailed'))
     }
   }
 }

@@ -10,6 +10,7 @@
 // archive rather than the browser.
 
 import { readJsonFile, writeJsonFile } from '../gdrive/driveApi'
+import { i18n } from './i18n.svelte'
 
 const CATEGORIES_FILENAME = 'categories.json'
 
@@ -23,11 +24,13 @@ export interface Category {
   kind: CategoryKind
 }
 
-export const CATEGORY_KINDS: { value: CategoryKind; label: string }[] = [
-  { value: 'sold', label: 'Sold' },
-  { value: 'bought', label: 'Bought' },
-  { value: 'other', label: 'Other' },
-]
+export function categoryKinds(): { value: CategoryKind; label: string }[] {
+  return [
+    { value: 'sold', label: i18n.t('category.sold') },
+    { value: 'bought', label: i18n.t('category.bought') },
+    { value: 'other', label: i18n.t('category.other') },
+  ]
+}
 
 // The three categories every archive starts with. They are ordinary
 // categories — the only thing special about them is that they're seeded.
@@ -42,7 +45,7 @@ export function defaultCategories(): Category[] {
 }
 
 export function kindLabel(kind: CategoryKind): string {
-  return CATEGORY_KINDS.find((option) => option.value === kind)?.label ?? kind
+  return categoryKinds().find((option) => option.value === kind)?.label ?? kind
 }
 
 export function categoriesOfKind(categories: Category[], kind: CategoryKind): Category[] {
@@ -68,11 +71,11 @@ export function resolveCategory(categories: Category[], kind: CategoryKind, pref
 // are rejected rather than silently rewritten.
 export function validateCategoryName(name: string, existing: Category[]): string | null {
   const trimmed = name.trim()
-  if (!trimmed) return 'Name cannot be empty'
-  if (/[\\/]/.test(trimmed)) return 'Name cannot contain / or \\'
-  if (trimmed.startsWith('.')) return 'Name cannot start with a dot'
+  if (!trimmed) return i18n.t('category.nameEmpty')
+  if (/[\\/]/.test(trimmed)) return i18n.t('category.nameSlash')
+  if (trimmed.startsWith('.')) return i18n.t('category.nameDot')
   if (existing.some((category) => category.key.toLowerCase() === trimmed.toLowerCase())) {
-    return 'A category with that name already exists'
+    return i18n.t('category.nameExists')
   }
   return null
 }

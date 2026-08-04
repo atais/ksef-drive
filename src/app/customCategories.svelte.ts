@@ -3,6 +3,7 @@
 
 import { categoriesStore } from './categoriesStore.svelte'
 import { confirmAction } from './confirm.svelte'
+import { i18n } from './i18n.svelte'
 import type { CategoryKind } from './categories'
 
 export class CustomCategoriesPage {
@@ -29,16 +30,16 @@ export class CustomCategoriesPage {
   async remove(key: string) {
     const files = await categoriesStore.countFiles(key)
     const confirmed = await confirmAction({
-      title: `Remove "${key}" and its folder from every month?`,
+      title: i18n.t('customCategories.removeTitle', { key }),
       details: [
         files === null
-          ? 'Could not count the files in those folders; they will be deleted anyway.'
+          ? i18n.t('customCategories.couldNotCountFiles')
           : files > 0
-            ? `${files} file(s) will be deleted from Google Drive.`
+            ? i18n.t('customCategories.filesWillBeDeleted', { n: files })
             : '',
-        'Invoices filed there go back to pending so you can re-file them elsewhere.',
+        i18n.t('customCategories.pendingAgain'),
       ],
-      confirmLabel: 'Remove',
+      confirmLabel: i18n.t('files.remove'),
       danger: true,
     })
     if (!confirmed) return

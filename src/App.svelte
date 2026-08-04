@@ -10,6 +10,7 @@
   import Files from './Files.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
   import Spinner from './Spinner.svelte'
+  import { i18n } from './app/i18n.svelte'
 
   session.restore()
 </script>
@@ -23,7 +24,7 @@
     <main class="flex-1 overflow-auto bg-white">
       {#if session.restoring}
         <div class="min-h-[calc(100vh-64px)] flex items-center justify-center">
-          <Spinner label="Restoring session..." />
+          <Spinner label={i18n.t('app.restoringSession')} />
         </div>
       {:else if !session.user}
         <Landing />
@@ -36,7 +37,7 @@
           {:else if navigation.activeView === 'invoices'}
             <Invoices />
           {:else}
-            <Spinner label="Connecting to KSEF..." />
+            <Spinner label={i18n.t('app.connectingKsef')} />
           {/if}
         </div>
       {/if}
