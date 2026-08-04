@@ -6,7 +6,7 @@ const DICTS = { pl, en } as const
 export type Lang = keyof typeof DICTS
 export type TranslationKey = keyof typeof pl
 
-const STORAGE_KEY = 'ksef-gdrive-lang'
+const STORAGE_KEY = 'ksef-drive-lang'
 
 function detectLang(): Lang {
   const stored = localStorage.getItem(STORAGE_KEY)

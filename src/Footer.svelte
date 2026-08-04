@@ -31,7 +31,7 @@
           {/each}
         </div>
         <a
-          href="https://github.com/atais/ksef-gdrive"
+          href="https://github.com/atais/ksef-drive"
           target="_blank"
           rel="noopener noreferrer"
           class="flex items-center gap-1.5 hover:text-gray-900 transition-colors"

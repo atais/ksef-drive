@@ -1,4 +1,4 @@
-# Project: ksef-gdrive
+# Project: ksef-drive
 
 A Svelte app integrating KSeF (Polish e-invoicing system) with Google Drive.
 

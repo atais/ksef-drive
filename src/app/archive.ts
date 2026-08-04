@@ -1,6 +1,6 @@
 // The shape of our Drive archive:
 //
-//   ksef-gdrive/
+//   ksef-drive/
 //     .config/                  credentials + invoice DB + categories
 //     <yyyy>/
 //       <MM.yyyy>/
@@ -24,7 +24,7 @@ import {
 import type { Category } from './categories'
 import { MONTH_KEY_PATTERN, monthKey } from './dates'
 
-const ROOT_FOLDER_NAME = 'ksef-gdrive'
+const ROOT_FOLDER_NAME = 'ksef-drive'
 const CONFIG_FOLDER_NAME = '.config'
 const YEAR_PATTERN = /^\d{4}$/
 
@@ -62,7 +62,7 @@ export async function ensureYearFolders(
 }
 
 // Resolves (creating if missing) a specific month's category subfolder, e.g.
-// ksef-gdrive/2026/03.2026/_Koszty.
+// ksef-drive/2026/03.2026/_Koszty.
 export async function ensureCategoryFolder(
   accessToken: string,
   rootFolderId: string,

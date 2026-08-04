@@ -1,4 +1,4 @@
-# ksef-gdrive-proxy (Cloudflare Worker)
+# ksef-drive-proxy (Cloudflare Worker)
 
 CORS proxy for the KSeF v2 API. KSeF sends no `Access-Control-Allow-Origin`
 header, so the GitHub Pages site can't call it directly — this Worker sits in
@@ -14,7 +14,7 @@ npx wrangler deploy
 ```
 
 Wrangler prints the deployed URL, e.g.:
-`https://ksef-gdrive-proxy.<your-subdomain>.workers.dev`
+`https://ksef-drive-proxy.<your-subdomain>.workers.dev`
 
 ## Wire it up
 
