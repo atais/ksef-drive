@@ -2,7 +2,7 @@
 
 Svelte app integrating [KSeF](https://www.podatki.gov.pl/ksef/) (Polish e-invoicing system) with Google Drive.
 
-**Live:** https://atais.github.io/ksef-gdrive/
+**Live:** https://atais.github.io/ksef-drive/
 
 ## Tech Stack
 
@@ -17,8 +17,8 @@ Svelte app integrating [KSeF](https://www.podatki.gov.pl/ksef/) (Polish e-invoic
 
 1. **Clone & install**
    ```bash
-   git clone https://github.com/atais/ksef-gdrive
-   cd ksef-gdrive
+   git clone https://github.com/atais/ksef-drive
+   cd ksef-drive
    npm install
    ```
 
@@ -35,7 +35,7 @@ Svelte app integrating [KSeF](https://www.podatki.gov.pl/ksef/) (Polish e-invoic
    ```bash
    npm run dev
    ```
-   Opens at http://localhost:5173/ksef-gdrive/
+   Opens at http://localhost:5173/ksef-drive/
 
 ### Build & Preview
 
@@ -55,7 +55,7 @@ Go to [Google Cloud Console](https://console.cloud.google.com/):
 3. Click your OAuth 2.0 Client ID
 4. Add Authorized redirect URIs:
    ```
-   https://atais.github.io/ksef-gdrive/
+   https://atais.github.io/ksef-drive/
    ```
 
 ### 2. Add GitHub Secret
@@ -96,7 +96,7 @@ Components read state from `app/` singletons (`session`, `navigation`, `categori
 4. Create OAuth 2.0 Client ID:
    - Application type: **Web application**
    - Authorized JavaScript origins: `http://localhost:5173`, `https://atais.github.io`
-   - Authorized redirect URIs: `https://atais.github.io/ksef-gdrive/`
+   - Authorized redirect URIs: `https://atais.github.io/ksef-drive/`
 5. Download JSON credentials → rename to `.env.local`, extract `VITE_GOOGLE_CLIENT_ID`
 
 ## Known Limitations
