@@ -10,16 +10,17 @@
      rule between them below that. -->
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
   <div class="max-w-2xl">
-    <div class="mb-10"><ArchiveLocation /></div>
-    <div class="mb-10"><CompletionSetting /></div>
     <KsefCredentialsForm currentCredentials={session.ksefCredentials} />
   </div>
 
-  <!-- Only once KSEF is configured: before that the page is an onboarding
-       form, and a second section would bury the one thing to do. -->
-  {#if session.ksefCredentials}
-    <div class="max-w-2xl border-t border-gray-200 pt-10 xl:border-t-0 xl:pt-0">
+  <!-- Archive location is always here: it is also the way out of an archive
+       that has no KSeF credentials. Categories wait for KSEF to be set up,
+       so the onboarding form isn't buried. -->
+  <div class="max-w-2xl space-y-10 border-t border-gray-200 pt-10 xl:border-t-0 xl:pt-0">
+    <ArchiveLocation />
+    <CompletionSetting />
+    {#if session.ksefCredentials}
       <CustomCategories />
-    </div>
-  {/if}
+    {/if}
+  </div>
 </div>
