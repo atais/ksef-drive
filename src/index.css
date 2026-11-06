@@ -46,6 +46,11 @@
 
 /* Table cells. Every table in the app uses the same header and body spacing,
    so alignment is the only thing a call site adds (`text-right` etc.). */
+/* Heading of a settings section; every block on the Settings page uses it. */
+@utility section-title {
+  @apply text-3xl font-bold text-gray-900 mb-2;
+}
+
 @utility th {
   @apply text-left py-3 px-4 text-sm font-semibold text-gray-600;
 }

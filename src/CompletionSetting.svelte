@@ -6,7 +6,7 @@
   let name = $state(archiveSettings.completionName)
 </script>
 
-<h2 class="text-2xl font-bold text-gray-900 mb-2">{i18n.t('settings.completionTitle')}</h2>
+<h2 class="section-title">{i18n.t('settings.completionTitle')}</h2>
 <p class="text-sm text-gray-600 mb-4">{i18n.t('settings.completionHint')}</p>
 <div class="mb-3"><ErrorBanner message={archiveSettings.error} /></div>
 

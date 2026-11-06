@@ -33,7 +33,7 @@
 
 <div class="bg-white rounded-xl">
   <div class="mb-6">
-    <h2 class="text-3xl font-bold text-gray-900 mb-2">{i18n.t('customCategories.title')}</h2>
+    <h2 class="section-title">{i18n.t('customCategories.title')}</h2>
   </div>
 
   <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
