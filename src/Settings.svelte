@@ -9,8 +9,8 @@
      rule between them below that. -->
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
   <div class="max-w-2xl">
+    <div class="mb-10"><ArchiveLocation /></div>
     <KsefCredentialsForm currentCredentials={session.ksefCredentials} />
-    <div class="mt-10"><ArchiveLocation /></div>
   </div>
 
   <!-- Only once KSEF is configured: before that the page is an onboarding

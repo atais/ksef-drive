@@ -22,7 +22,7 @@
 
 <div class="flex items-center gap-3">
   <span class="flex-1 text-sm font-medium text-gray-900 truncate">
-    {session.archiveFolder?.name ?? i18n.t('settings.archiveDefault')}
+    {session.archivePath || session.archiveFolder?.name || i18n.t('settings.archiveDefault')}
   </span>
   {#if session.archiveFolder}
     <button type="button" class="btn btn-ghost" onclick={() => session.setArchiveFolder(null)}>

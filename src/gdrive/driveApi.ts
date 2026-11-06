@@ -63,6 +63,13 @@ export function listFilesOnly(accessToken: string, parentId: string): Promise<Dr
   return queryFiles(accessToken, [inParent(parentId), isNotFolder, NOT_TRASHED])
 }
 
+// Every folder with this name that the app can see, optionally under a parent.
+export function findFolders(accessToken: string, name: string, parentId?: string): Promise<DriveFile[]> {
+  const clauses = [named(name), isFolder, NOT_TRASHED]
+  if (parentId) clauses.push(inParent(parentId))
+  return queryFiles(accessToken, clauses)
+}
+
 export async function findFile(accessToken: string, folderId: string, filename: string): Promise<DriveFile | null> {
   const files = await queryFiles(accessToken, [named(filename), inParent(folderId), NOT_TRASHED])
   return files[0] ?? null
@@ -111,9 +118,7 @@ export async function ensureFolder(accessToken: string, name: string, parentId?:
   if (inFlight) return inFlight
 
   const promise = (async () => {
-    const clauses = [named(name), isFolder, NOT_TRASHED]
-    if (parentId) clauses.push(inParent(parentId))
-    const matches = await queryFiles(accessToken, clauses)
+    const matches = await findFolders(accessToken, name, parentId)
     return matches[0] ?? createFolder(accessToken, name, parentId)
   })()
 
@@ -182,6 +187,29 @@ export async function uploadFile(accessToken: string, folderId: string, file: Fi
     body,
   })
   return response.json()
+}
+
+// Human-readable path of a folder, e.g. "My Drive / Work / ksef-drive". Needs
+// the drive.metadata.readonly scope to see ancestors; where one is still
+// unreadable (e.g. a shared folder's parents) the path starts with "…".
+export async function folderPath(accessToken: string, folderId: string): Promise<string> {
+  const names: string[] = []
+  let id: string | undefined = folderId
+  for (let depth = 0; id && depth < 20; depth++) {
+    try {
+      const response = await driveFetch(accessToken, `${DRIVE_API}/files/${id}?fields=name,parents`)
+      const data: { name: string; parents?: string[] } = await response.json()
+      names.unshift(data.name)
+      id = data.parents?.[0]
+      // Without metadata access a missing parent means the rest of the path is
+      // hidden from us; only My Drive itself is really the top.
+      if (!id && data.name !== 'My Drive') names.unshift('…')
+    } catch {
+      names.unshift('…')
+      break
+    }
+  }
+  return names.join(' / ')
 }
 
 // Deletes a named file from a folder, if present.
