@@ -36,6 +36,15 @@ export interface FileRow {
 }
 
 const NONE = '-'
+
+// Dated rows before undated ones, newest date first, then by filename.
+function newestFirst(a: FileRow, b: FileRow): number {
+  return (
+    Number(a.issueDate === NONE) - Number(b.issueDate === NONE) ||
+    b.issueDate.localeCompare(a.issueDate) ||
+    a.file.name.localeCompare(b.file.name)
+  )
+}
 const UPLOADING = 'upload:'
 const MARKING = 'mark-complete'
 
@@ -57,7 +66,7 @@ export class FilesStore {
     this.folders.flatMap((section) =>
       section.files
         .map((file) => this.toRow(file, section.category))
-        .sort((a, b) => Number(a.issueDate === NONE) - Number(b.issueDate === NONE) || b.issueDate.localeCompare(a.issueDate) || a.file.name.localeCompare(b.file.name))
+        .sort(newestFirst)
     )
   )
 
