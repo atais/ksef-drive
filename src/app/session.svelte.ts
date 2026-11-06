@@ -116,9 +116,20 @@ export class Session {
   // backfill without blocking on a dozen Drive round-trips. Categories have
   // to be known first — they're what the backfill creates inside each month.
   private async openArchive(token: string): Promise<string> {
-    const root = this.archiveFolder ?? (await ensureArchiveRoot(token))
+    let root = this.archiveFolder ?? (await ensureArchiveRoot(token))
+    try {
+      this.configFolderId = await ensureConfigFolder(token, root.id)
+    } catch (error) {
+      // A picked folder that can't be written (deleted, access revoked) must
+      // not lock the user out: forget it and fall back to the default archive.
+      if (!this.archiveFolder) throw error
+      console.error('Picked archive folder unusable, using default:', error)
+      localStorage.removeItem(ARCHIVE_FOLDER_KEY)
+      this.archiveFolder = null
+      root = await ensureArchiveRoot(token)
+      this.configFolderId = await ensureConfigFolder(token, root.id)
+    }
     this.rootFolderId = root.id
-    this.configFolderId = await ensureConfigFolder(token, root.id)
     await categoriesStore.load(token, this.configFolderId)
     this.runInBackground(() => ensureYearFolders(token, root.id, categoriesStore.names))
     return root.id
