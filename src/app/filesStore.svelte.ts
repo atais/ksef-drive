@@ -10,7 +10,7 @@ import { errorMessage } from './errors'
 import { folderTree } from './folderTree.svelte'
 import { i18n } from './i18n.svelte'
 import { counterpartyName, formatAmount } from './invoiceDisplay'
-import { invoiceRole, isInvoiceXml } from './invoiceFiling'
+import { invoiceRole, isInvoiceXml, ksefNumberFromFilename } from './invoiceFiling'
 import { invoicesDb } from './invoicesDbStore.svelte'
 import { session } from './session.svelte'
 import { TaskState } from './task.svelte'
@@ -31,8 +31,6 @@ export interface FileRow {
   // Drive's own viewer, for anything the XML preview can't render (PDFs...).
   openUrl: string
   removing: boolean
-  // Added by hand, not filed from KSeF: no DB entry, so removable here.
-  external: boolean
 }
 
 const NONE = '-'
@@ -86,7 +84,6 @@ export class FilesStore {
       previewable: isInvoiceXml(file.name),
       openUrl: `https://drive.google.com/file/d/${file.id}/view`,
       removing: this.task.isBusy(file.id),
-      external: !entry,
     }
   }
 
@@ -120,18 +117,20 @@ export class FilesStore {
     return () => (cancelled = true)
   }
 
-  // Removes a file the user added by hand. KSeF invoices aren't offered here:
-  // they're managed from the Invoices page, which keeps the DB in step.
+  // Removes a file from Drive. A filed KSeF invoice also has its filing state
+  // cleared in the DB, so it shows back up as pending on the Invoices page.
   async remove(file: DriveFile) {
     await this.task.run(
       i18n.t('files.failedRemoveFile'),
       async () => {
         const { accessToken } = session.requireDrive()
+        const filed = invoicesDb.entryForFilename(file.name)
         await deleteFile(accessToken, file.id)
         this.folders = this.folders.map((section) => ({
           ...section,
           files: section.files.filter((candidate) => candidate.id !== file.id),
         }))
+        if (filed) await invoicesDb.unfile([ksefNumberFromFilename(file.name)])
       },
       file.id
     )

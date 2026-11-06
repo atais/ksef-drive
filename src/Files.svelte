@@ -141,18 +141,16 @@
                   </div>
                 </td>
                 <td class="px-4 py-2 text-right">
-                  {#if row.external}
-                    <button
-                      type="button"
-                      onclick={() => filesStore.remove(row.file)}
-                      disabled={row.removing}
-                      title={i18n.t('files.removeFromDrive')}
-                      aria-label={i18n.t('files.removeFromDrive')}
-                      class="btn btn-icon btn-danger"
-                    >
-                      <Icon src={Trash} class="w-4 h-4" />
-                    </button>
-                  {/if}
+                  <button
+                    type="button"
+                    onclick={() => filesStore.remove(row.file)}
+                    disabled={row.removing}
+                    title={i18n.t('files.removeFromDrive')}
+                    aria-label={i18n.t('files.removeFromDrive')}
+                    class="btn btn-icon btn-danger"
+                  >
+                    <Icon src={Trash} class="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             {/each}
