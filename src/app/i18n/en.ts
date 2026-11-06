@@ -185,5 +185,6 @@ export const en: Record<keyof typeof pl, string> = {
   'session.connectDriveFirst': 'Connect Google Drive first',
   'session.connectKsefFirst': 'Connect KSeF first',
   'session.notConnectedKsef': 'Not connected to KSEF',
+  'session.archiveOpenFailed': 'Failed to open the archive',
   'session.notConnectedDrive': 'Not connected to Google Drive',
 }

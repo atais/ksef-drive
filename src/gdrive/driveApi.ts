@@ -189,9 +189,8 @@ export async function uploadFile(accessToken: string, folderId: string, file: Fi
   return response.json()
 }
 
-// Human-readable path of a folder, e.g. "My Drive / Work / ksef-drive". Needs
-// the drive.metadata.readonly scope to see ancestors; where one is still
-// unreadable (e.g. a shared folder's parents) the path starts with "…".
+// Human-readable path of a folder, e.g. "My Drive / Work / ksef-drive". Where an
+// ancestor is unreadable (e.g. a shared folder's parents) the path starts with "…".
 export async function folderPath(accessToken: string, folderId: string): Promise<string> {
   const names: string[] = []
   let id: string | undefined = folderId

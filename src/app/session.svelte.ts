@@ -16,10 +16,11 @@ import { pickFolder } from '../gdrive/folderPicker'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
+import { errorMessage } from './errors'
 import { i18n } from './i18n.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const CREDENTIALS_FILENAME = 'ksef_credentials.json'
 const STORAGE_KEY = 'gdrive_session'
 const ARCHIVE_FOLDER_KEY = 'ksef-drive-archive-folder'
@@ -64,6 +65,9 @@ export class Session {
 
   // Full Drive path of the archive root, for display. Filled in after open.
   archivePath = $state('')
+
+  // Why the archive couldn't be opened, for the main screen.
+  archiveError = $state<string | null>(null)
 
   restoring = $state(true)
   savingCredentials = $state(false)
@@ -184,6 +188,7 @@ export class Session {
       if (this.ksefCredentials) void this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Session restore failed:', error)
+      if (this.user) this.archiveError = errorMessage(error, i18n.t('session.archiveOpenFailed'))
     } finally {
       this.restoring = false
     }
@@ -203,6 +208,7 @@ export class Session {
       if (this.ksefCredentials) await this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Login/init failed:', error)
+      if (this.user) this.archiveError = errorMessage(error, i18n.t('session.archiveOpenFailed'))
     } finally {
       this.restoring = false
     }
@@ -215,6 +221,7 @@ export class Session {
     this.configFolderId = null
     this.rootFolderId = null
     this.archivePath = ''
+    this.archiveError = null
     this.ksefCredentials = null
     this.ksefSessionToken = null
   }

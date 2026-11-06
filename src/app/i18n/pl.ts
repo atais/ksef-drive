@@ -183,5 +183,6 @@ export const pl = {
   'session.connectDriveFirst': 'Najpierw połącz Google Drive',
   'session.connectKsefFirst': 'Najpierw połącz KSeF',
   'session.notConnectedKsef': 'Brak połączenia z KSEF',
+  'session.archiveOpenFailed': 'Nie udało się otworzyć archiwum',
   'session.notConnectedDrive': 'Brak połączenia z Google Drive',
 } as const

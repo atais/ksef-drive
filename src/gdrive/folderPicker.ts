@@ -1,6 +1,5 @@
-// Google Picker, for choosing an existing Drive folder. Under the drive.file
-// scope the app can't browse Drive itself; a folder the user picks here is
-// granted to the app, which is the only way to reach one it didn't create.
+// Google Picker, for choosing an existing Drive folder to use as the archive
+// root, including ones shared with the user.
 
 import type { DriveFile } from './driveApi'
 
