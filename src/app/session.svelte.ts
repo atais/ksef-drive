@@ -11,16 +11,20 @@ import {
   requestGoogleAccessToken,
   type GoogleUser,
 } from '../gdrive/googleAuth'
-import { deleteFileByName, readJsonFile, writeJsonFile } from '../gdrive/driveApi'
+import { deleteFileByName, folderPath, readJsonFile, writeJsonFile, type DriveFile } from '../gdrive/driveApi'
+import { pickFolder } from '../gdrive/folderPicker'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
+import { archiveSettings } from './archiveSettings.svelte'
 import { categoriesStore } from './categoriesStore.svelte'
+import { errorMessage } from './errors'
 import { i18n } from './i18n.svelte'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE'
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const CREDENTIALS_FILENAME = 'ksef_credentials.json'
 const STORAGE_KEY = 'gdrive_session'
+const ARCHIVE_FOLDER_KEY = 'ksef-drive-archive-folder'
 
 export type { GoogleUser }
 
@@ -54,6 +58,17 @@ export class Session {
   rootFolderId = $state<string | null>(null)
   ksefCredentials = $state<KsefCredentials | null>(null)
   ksefSessionToken = $state<string | null>(null)
+
+  // The Drive folder the user picked as the archive root, if any. Kept in
+  // localStorage rather than the archive itself, since it has to be known
+  // before the archive can be opened.
+  archiveFolder = $state<DriveFile | null>(JSON.parse(localStorage.getItem(ARCHIVE_FOLDER_KEY) ?? 'null'))
+
+  // Full Drive path of the archive root, for display. Filled in after open.
+  archivePath = $state('')
+
+  // Why the archive couldn't be opened, for the main screen.
+  archiveError = $state<string | null>(null)
 
   restoring = $state(true)
   savingCredentials = $state(false)
@@ -109,12 +124,38 @@ export class Session {
   // backfill without blocking on a dozen Drive round-trips. Categories have
   // to be known first — they're what the backfill creates inside each month.
   private async openArchive(token: string): Promise<string> {
-    const root = await ensureArchiveRoot(token)
+    let root = this.archiveFolder ?? (await ensureArchiveRoot(token))
+    try {
+      this.configFolderId = await ensureConfigFolder(token, root.id)
+    } catch (error) {
+      // A picked folder that can't be written (deleted, access revoked) must
+      // not lock the user out: forget it and fall back to the default archive.
+      if (!this.archiveFolder) throw error
+      console.error('Picked archive folder unusable, using default:', error)
+      localStorage.removeItem(ARCHIVE_FOLDER_KEY)
+      this.archiveFolder = null
+      root = await ensureArchiveRoot(token)
+      this.configFolderId = await ensureConfigFolder(token, root.id)
+    }
     this.rootFolderId = root.id
-    this.configFolderId = await ensureConfigFolder(token, root.id)
+    this.runInBackground(async () => (this.archivePath = await folderPath(token, root.id)))
     await categoriesStore.load(token, this.configFolderId)
+    await archiveSettings.load(token, this.configFolderId)
     this.runInBackground(() => ensureYearFolders(token, root.id, categoriesStore.names))
     return root.id
+  }
+
+  // Lets the user pick the archive root in Drive's own picker. Everything
+  // loaded so far belongs to the old archive, so a pick reopens from scratch.
+  async chooseArchiveFolder() {
+    const folder = await pickFolder(this.requireDrive().accessToken)
+    if (folder) this.setArchiveFolder(folder)
+  }
+
+  setArchiveFolder(folder: DriveFile | null) {
+    if (folder) localStorage.setItem(ARCHIVE_FOLDER_KEY, JSON.stringify(folder))
+    else localStorage.removeItem(ARCHIVE_FOLDER_KEY)
+    location.reload()
   }
 
   private loadKsefCredentials(token: string, configFolderId: string) {
@@ -142,9 +183,14 @@ export class Session {
       this.ksefCredentials = stored.ksefCredentials
 
       await this.openArchive(stored.accessToken)
+      // The archive's .config is the source of truth; the stored copy can be
+      // stale or belong to another archive (e.g. after picking a folder).
+      this.ksefCredentials = await this.loadKsefCredentials(stored.accessToken, this.configFolderId!)
+      this.persist()
       if (this.ksefCredentials) void this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Session restore failed:', error)
+      if (this.user) this.archiveError = errorMessage(error, i18n.t('session.archiveOpenFailed'))
     } finally {
       this.restoring = false
     }
@@ -164,6 +210,7 @@ export class Session {
       if (this.ksefCredentials) await this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Login/init failed:', error)
+      if (this.user) this.archiveError = errorMessage(error, i18n.t('session.archiveOpenFailed'))
     } finally {
       this.restoring = false
     }
@@ -175,6 +222,8 @@ export class Session {
     this.accessToken = null
     this.configFolderId = null
     this.rootFolderId = null
+    this.archivePath = ''
+    this.archiveError = null
     this.ksefCredentials = null
     this.ksefSessionToken = null
   }

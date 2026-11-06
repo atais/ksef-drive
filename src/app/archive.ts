@@ -17,6 +17,7 @@
 import {
   deleteFile,
   ensureFolder,
+  findFolders,
   listFilesOnly,
   listSubfolders,
   type DriveFile,
@@ -28,8 +29,21 @@ const ROOT_FOLDER_NAME = 'ksef-drive'
 const CONFIG_FOLDER_NAME = '.config'
 const YEAR_PATTERN = /^\d{4}$/
 
-export function ensureArchiveRoot(accessToken: string): Promise<DriveFile> {
-  return ensureFolder(accessToken, ROOT_FOLDER_NAME)
+// The app can see every folder it created or was handed through the Picker, so
+// more than one may be named `ksef-drive`. The real archive is the one whose
+// .config has files in it (credentials, invoice DB), not whichever Drive lists
+// first.
+export async function ensureArchiveRoot(accessToken: string): Promise<DriveFile> {
+  const candidates = await findFolders(accessToken, ROOT_FOLDER_NAME)
+  if (candidates.length < 2) return candidates[0] ?? ensureFolder(accessToken, ROOT_FOLDER_NAME)
+
+  const sizes = await Promise.all(
+    candidates.map(async (root) => {
+      const [config] = await findFolders(accessToken, CONFIG_FOLDER_NAME, root.id)
+      return config ? (await listFilesOnly(accessToken, config.id)).length : 0
+    })
+  )
+  return candidates[sizes.indexOf(Math.max(...sizes))]
 }
 
 export async function ensureConfigFolder(accessToken: string, rootFolderId: string): Promise<string> {
@@ -190,7 +204,9 @@ export interface CategorySection {
 
 // Lists the files in each category subfolder of a month, in category order. A
 // missing subfolder yields an empty section rather than being dropped, so the
-// page layout stays stable.
+// page layout stays stable. Folders that aren't configured categories (an older
+// archive's own layout, say) follow as plain "other" sections, so nothing
+// sitting in a month is hidden.
 export function listMonthCategories(
   accessToken: string,
   monthFolderId: string,
@@ -198,8 +214,14 @@ export function listMonthCategories(
 ): Promise<CategorySection[]> {
   return listSubfolders(accessToken, monthFolderId).then((subfolders) => {
     const byName = new Map(subfolders.map((folder) => [folder.name, folder]))
+    const known = new Set(categories.map((category) => category.key))
+    const extras: Category[] = subfolders
+      .filter((folder) => !known.has(folder.name) && !folder.name.startsWith('.'))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((folder) => ({ key: folder.name, kind: 'other' }))
+
     return Promise.all(
-      categories.map(async (category) => ({
+      [...categories, ...extras].map(async (category) => ({
         category,
         files: byName.has(category.key) ? await listFilesOnly(accessToken, byName.get(category.key)!.id) : [],
       }))

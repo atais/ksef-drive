@@ -9,6 +9,7 @@
   import Invoices from './Invoices.svelte'
   import Files from './Files.svelte'
   import ConfirmDialog from './ConfirmDialog.svelte'
+  import ErrorBanner from './ErrorBanner.svelte'
   import Spinner from './Spinner.svelte'
   import { i18n } from './app/i18n.svelte'
 
@@ -29,7 +30,8 @@
       {:else if !session.user}
         <Landing />
       {:else}
-        <div class="p-4 sm:p-8">
+        <div class="p-4 sm:p-8 space-y-6">
+          <ErrorBanner message={session.archiveError} />
           {#if navigation.activeView === 'settings'}
             <Settings />
           {:else if navigation.activeView === 'files'}

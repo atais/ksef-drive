@@ -34,7 +34,7 @@
 
 <div class="bg-white rounded-xl">
   <div class="mb-6">
-    <h2 class="text-3xl font-bold text-gray-900 mb-2">
+    <h2 class="section-title">
       {i18n.t('credentials.title')}
     </h2>
     <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

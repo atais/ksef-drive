@@ -10,6 +10,8 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export interface DriveFile {
   id: string
   name: string
+  // Only present for queries that ask for it (see findFilesNamed).
+  parents?: string[]
 }
 
 async function driveFetch(accessToken: string, url: string, init: RequestInit = {}): Promise<Response> {
@@ -42,11 +44,11 @@ const isNotFolder = `mimeType!=${quote(FOLDER_MIME)}`
 
 // The single entry point for "find files matching this query". Every listing
 // helper below is just a different set of clauses.
-export async function queryFiles(accessToken: string, clauses: string[]): Promise<DriveFile[]> {
+export async function queryFiles(accessToken: string, clauses: string[], fields = 'id,name'): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     q: clauses.join(' and '),
     spaces: 'drive',
-    fields: 'files(id,name)',
+    fields: `files(${fields})`,
     pageSize: '1000',
   })
 
@@ -61,6 +63,21 @@ export function listSubfolders(accessToken: string, parentId: string): Promise<D
 
 export function listFilesOnly(accessToken: string, parentId: string): Promise<DriveFile[]> {
   return queryFiles(accessToken, [inParent(parentId), isNotFolder, NOT_TRASHED])
+}
+
+// Every folder with this name that the app can see, optionally under a parent.
+export function findFolders(accessToken: string, name: string, parentId?: string): Promise<DriveFile[]> {
+  const clauses = [named(name), isFolder, NOT_TRASHED]
+  if (parentId) clauses.push(inParent(parentId))
+  return queryFiles(accessToken, clauses)
+}
+
+// Every non-folder file with this name, wherever it sits (or just in one
+// folder), with its parents: one request answers "which folders contain it".
+export function findFilesNamed(accessToken: string, name: string, parentId?: string): Promise<DriveFile[]> {
+  const clauses = [named(name), isNotFolder, NOT_TRASHED]
+  if (parentId) clauses.push(inParent(parentId))
+  return queryFiles(accessToken, clauses, 'id,name,parents')
 }
 
 export async function findFile(accessToken: string, folderId: string, filename: string): Promise<DriveFile | null> {
@@ -82,8 +99,15 @@ async function createFolder(accessToken: string, name: string, parentId?: string
   return { id: data.id, name: data.name }
 }
 
+// Moves to Drive's trash rather than deleting for good (the API's DELETE skips
+// the trash), so a mistaken removal can be restored for ~30 days. A trashed
+// folder takes its contents with it.
 export async function deleteFile(accessToken: string, fileId: string): Promise<void> {
-  await driveFetch(accessToken, `${DRIVE_API}/files/${fileId}`, { method: 'DELETE' })
+  await driveFetch(accessToken, `${DRIVE_API}/files/${fileId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: true }),
+  })
 }
 
 export async function moveFile(
@@ -111,9 +135,7 @@ export async function ensureFolder(accessToken: string, name: string, parentId?:
   if (inFlight) return inFlight
 
   const promise = (async () => {
-    const clauses = [named(name), isFolder, NOT_TRASHED]
-    if (parentId) clauses.push(inParent(parentId))
-    const matches = await queryFiles(accessToken, clauses)
+    const matches = await findFolders(accessToken, name, parentId)
     return matches[0] ?? createFolder(accessToken, name, parentId)
   })()
 
@@ -161,6 +183,49 @@ export async function putTextFile(
     headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
     body,
   })
+}
+
+// Uploads a browser File (any type, binary-safe) into a folder. Always creates:
+// same-named siblings are kept, unlike putTextFile.
+export async function uploadFile(accessToken: string, folderId: string, file: File): Promise<DriveFile> {
+  // Drive wants multipart/related, which FormData can't produce.
+  const boundary = '-------314159265358979323846'
+  const body = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
+    JSON.stringify({ name: file.name, parents: [folderId] }),
+    `\r\n--${boundary}\r\nContent-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`,
+    file,
+    `\r\n--${boundary}--`,
+  ])
+
+  const response = await driveFetch(accessToken, `${UPLOAD_API}/files?uploadType=multipart&fields=id,name`, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  return response.json()
+}
+
+// Human-readable path of a folder, e.g. "My Drive / Work / ksef-drive". Where an
+// ancestor is unreadable (e.g. a shared folder's parents) the path starts with "…".
+export async function folderPath(accessToken: string, folderId: string): Promise<string> {
+  const names: string[] = []
+  let id: string | undefined = folderId
+  for (let depth = 0; id && depth < 20; depth++) {
+    try {
+      const response = await driveFetch(accessToken, `${DRIVE_API}/files/${id}?fields=name,parents`)
+      const data: { name: string; parents?: string[] } = await response.json()
+      names.unshift(data.name)
+      id = data.parents?.[0]
+      // Without metadata access a missing parent means the rest of the path is
+      // hidden from us; only My Drive itself is really the top.
+      if (!id && data.name !== 'My Drive') names.unshift('…')
+    } catch {
+      names.unshift('…')
+      break
+    }
+  }
+  return names.join(' / ')
 }
 
 // Deletes a named file from a folder, if present.
