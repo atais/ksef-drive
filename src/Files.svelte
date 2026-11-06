@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Icon, Document, Trash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
+  import { Icon, Document, Trash, DocumentMagnifyingGlass, ArrowUpTray } from 'svelte-hero-icons'
   import { categoriesStore } from './app/categoriesStore.svelte'
   import { filesStore } from './app/filesStore.svelte'
   import { drivePreview } from './app/invoicePreview.svelte'
@@ -36,7 +36,24 @@
     <div class="space-y-6">
       {#each filesStore.sections as section (section.category.key)}
         <div class="bg-white rounded-xl">
-          <h3 class="text-2xl font-bold text-gray-900 mb-6">{section.category.key}</h3>
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-900">{section.category.key}</h3>
+            <label class="btn btn-ghost cursor-pointer" aria-disabled={filesStore.isUploading(section.category)}>
+              <Icon src={ArrowUpTray} class="w-4 h-4" />
+              {i18n.t('files.upload')}
+              <input
+                type="file"
+                multiple
+                class="hidden"
+                disabled={filesStore.isUploading(section.category)}
+                onchange={(event) => {
+                  const input = event.currentTarget
+                  filesStore.upload(section.category, [...(input.files ?? [])])
+                  input.value = ''
+                }}
+              />
+            </label>
+          </div>
           {#if section.rows.length === 0}
             <p class="text-sm text-gray-400">{i18n.t('files.noFiles')}</p>
           {:else if section.tabular}
@@ -83,16 +100,18 @@
                         </div>
                       </td>
                       <td class="py-4 px-4 text-right">
-                        <button
-                          type="button"
-                          onclick={() => filesStore.remove(row.file)}
-                          disabled={row.removing}
-                          title={i18n.t('files.removeFromDrive')}
-                          aria-label={i18n.t('files.removeFromDrive')}
-                          class="btn btn-icon btn-danger"
-                        >
-                          <Icon src={Trash} class="w-4 h-4" />
-                        </button>
+                        {#if row.external}
+                          <button
+                            type="button"
+                            onclick={() => filesStore.remove(row.file)}
+                            disabled={row.removing}
+                            title={i18n.t('files.removeFromDrive')}
+                            aria-label={i18n.t('files.removeFromDrive')}
+                            class="btn btn-icon btn-danger"
+                          >
+                            <Icon src={Trash} class="w-4 h-4" />
+                          </button>
+                        {/if}
                       </td>
                     </tr>
                   {/each}
@@ -116,6 +135,18 @@
                       class="btn btn-icon btn-ghost"
                     >
                       <Icon src={DocumentMagnifyingGlass} class="w-4 h-4" />
+                    </button>
+                  {/if}
+                  {#if row.external}
+                    <button
+                      type="button"
+                      onclick={() => filesStore.remove(row.file)}
+                      disabled={row.removing}
+                      title={i18n.t('files.removeFromDrive')}
+                      aria-label={i18n.t('files.removeFromDrive')}
+                      class="btn btn-icon btn-danger"
+                    >
+                      <Icon src={Trash} class="w-4 h-4" />
                     </button>
                   {/if}
                 </div>

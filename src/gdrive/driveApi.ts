@@ -163,6 +163,27 @@ export async function putTextFile(
   })
 }
 
+// Uploads a browser File (any type, binary-safe) into a folder. Always creates:
+// same-named siblings are kept, unlike putTextFile.
+export async function uploadFile(accessToken: string, folderId: string, file: File): Promise<DriveFile> {
+  // Drive wants multipart/related, which FormData can't produce.
+  const boundary = '-------314159265358979323846'
+  const body = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`,
+    JSON.stringify({ name: file.name, parents: [folderId] }),
+    `\r\n--${boundary}\r\nContent-Type: ${file.type || 'application/octet-stream'}\r\n\r\n`,
+    file,
+    `\r\n--${boundary}--`,
+  ])
+
+  const response = await driveFetch(accessToken, `${UPLOAD_API}/files?uploadType=multipart&fields=id,name`, {
+    method: 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body,
+  })
+  return response.json()
+}
+
 // Deletes a named file from a folder, if present.
 export async function deleteFileByName(accessToken: string, folderId: string, filename: string): Promise<void> {
   const existing = await findFile(accessToken, folderId, filename)

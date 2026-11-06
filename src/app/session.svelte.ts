@@ -11,7 +11,7 @@ import {
   requestGoogleAccessToken,
   type GoogleUser,
 } from '../gdrive/googleAuth'
-import { deleteFileByName, readJsonFile, writeJsonFile } from '../gdrive/driveApi'
+import { deleteFileByName, readJsonFile, writeJsonFile, type DriveFile } from '../gdrive/driveApi'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
@@ -21,6 +21,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'YOUR_CLIENT_I
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email'
 const CREDENTIALS_FILENAME = 'ksef_credentials.json'
 const STORAGE_KEY = 'gdrive_session'
+const ARCHIVE_FOLDER_KEY = 'ksef-drive-archive-folder'
 
 export type { GoogleUser }
 
@@ -54,6 +55,11 @@ export class Session {
   rootFolderId = $state<string | null>(null)
   ksefCredentials = $state<KsefCredentials | null>(null)
   ksefSessionToken = $state<string | null>(null)
+
+  // The Drive folder the user picked as the archive root, if any. Kept in
+  // localStorage rather than the archive itself, since it has to be known
+  // before the archive can be opened.
+  archiveFolder = $state<DriveFile | null>(JSON.parse(localStorage.getItem(ARCHIVE_FOLDER_KEY) ?? 'null'))
 
   restoring = $state(true)
   savingCredentials = $state(false)
@@ -109,12 +115,19 @@ export class Session {
   // backfill without blocking on a dozen Drive round-trips. Categories have
   // to be known first — they're what the backfill creates inside each month.
   private async openArchive(token: string): Promise<string> {
-    const root = await ensureArchiveRoot(token)
+    const root = this.archiveFolder ?? (await ensureArchiveRoot(token))
     this.rootFolderId = root.id
     this.configFolderId = await ensureConfigFolder(token, root.id)
     await categoriesStore.load(token, this.configFolderId)
     this.runInBackground(() => ensureYearFolders(token, root.id, categoriesStore.names))
     return root.id
+  }
+
+  // Everything loaded so far belongs to the old archive, so reopen from scratch.
+  setArchiveFolder(folder: DriveFile | null) {
+    if (folder) localStorage.setItem(ARCHIVE_FOLDER_KEY, JSON.stringify(folder))
+    else localStorage.removeItem(ARCHIVE_FOLDER_KEY)
+    location.reload()
   }
 
   private loadKsefCredentials(token: string, configFolderId: string) {

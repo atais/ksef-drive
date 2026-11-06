@@ -2,13 +2,13 @@
 // month's folders on Drive, joined against the invoice DB so filed invoices
 // can be shown with their metadata rather than as bare filenames.
 
-import { deleteFile, type DriveFile } from '../gdrive/driveApi'
+import { deleteFile, ensureFolder, uploadFile, type DriveFile } from '../gdrive/driveApi'
 import { listMonthCategories, type CategorySection } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
 import { errorMessage } from './errors'
 import { i18n } from './i18n.svelte'
 import { counterpartyName, formatAmount } from './invoiceDisplay'
-import { invoiceRole, isInvoiceXml, ksefNumberFromFilename } from './invoiceFiling'
+import { invoiceRole, isInvoiceXml } from './invoiceFiling'
 import { invoicesDb } from './invoicesDbStore.svelte'
 import { session } from './session.svelte'
 import { TaskState } from './task.svelte'
@@ -24,6 +24,8 @@ export interface FileRow {
   vat: string
   previewable: boolean
   removing: boolean
+  // Added by hand, not filed from KSeF: no DB entry, so removable here.
+  external: boolean
 }
 
 export interface FileSection {
@@ -37,10 +39,12 @@ export interface FileSection {
 }
 
 const NONE = '-'
+const UPLOADING = 'upload:'
 
 export class FilesStore {
   loading = $state(false)
   private folders = $state<CategorySection[]>([])
+  private monthFolderId: string | null = null
   private task = new TaskState()
 
   readonly error = $derived(this.task.error)
@@ -67,6 +71,7 @@ export class FilesStore {
       vat: invoice ? formatAmount(invoice.vatAmount, invoice.currency) : NONE,
       previewable: isInvoiceXml(file.name),
       removing: this.task.isBusy(file.id),
+      external: !entry,
     }
   }
 
@@ -79,6 +84,7 @@ export class FilesStore {
     this.loading = true
     this.task.clearError()
     this.folders = []
+    this.monthFolderId = folderId
 
     let cancelled = false
     Promise.all([
@@ -98,8 +104,8 @@ export class FilesStore {
     return () => (cancelled = true)
   }
 
-  // Removes a filed invoice: deletes it from Drive and clears its filing state
-  // in the DB, so it shows back up as pending on the Invoices page.
+  // Removes a file the user added by hand. KSeF invoices aren't offered here:
+  // they're managed from the Invoices page, which keeps the DB in step.
   async remove(file: DriveFile) {
     await this.task.run(
       i18n.t('files.failedRemoveFile'),
@@ -110,10 +116,37 @@ export class FilesStore {
           ...section,
           files: section.files.filter((candidate) => candidate.id !== file.id),
         }))
-        await invoicesDb.unfile([ksefNumberFromFilename(file.name)])
       },
       file.id
     )
+  }
+
+  // Uploads files into one category folder of the loaded month, creating the
+  // folder if it's missing.
+  async upload(category: Category, files: File[]) {
+    const monthFolderId = this.monthFolderId
+    if (!monthFolderId || files.length === 0) return
+    await this.task.run(
+      i18n.t('files.failedUpload'),
+      async () => {
+        const { accessToken } = session.requireDrive()
+        const folder = await ensureFolder(accessToken, category.key, monthFolderId)
+        const uploaded: DriveFile[] = []
+        try {
+          for (const file of files) uploaded.push(await uploadFile(accessToken, folder.id, file))
+        } finally {
+          // Show what made it up even if a later file failed.
+          this.folders = this.folders.map((section) =>
+            section.category.key === category.key ? { ...section, files: [...section.files, ...uploaded] } : section
+          )
+        }
+      },
+      UPLOADING + category.key
+    )
+  }
+
+  isUploading(category: Category): boolean {
+    return this.task.isBusy(UPLOADING + category.key)
   }
 }
 
