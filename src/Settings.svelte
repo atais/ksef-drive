@@ -1,5 +1,6 @@
 <script lang="ts">
   import ArchiveLocation from './ArchiveLocation.svelte'
+  import CompletionSetting from './CompletionSetting.svelte'
   import CustomCategories from './CustomCategories.svelte'
   import KsefCredentialsForm from './KsefCredentialsForm.svelte'
   import { session } from './app/session.svelte'
@@ -10,6 +11,7 @@
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
   <div class="max-w-2xl">
     <div class="mb-10"><ArchiveLocation /></div>
+    <div class="mb-10"><CompletionSetting /></div>
     <KsefCredentialsForm currentCredentials={session.ksefCredentials} />
   </div>
 

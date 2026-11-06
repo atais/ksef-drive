@@ -32,12 +32,14 @@ export function categoryKinds(): { value: CategoryKind; label: string }[] {
   ]
 }
 
-// The three categories every archive starts with. They are ordinary
-// categories — the only thing special about them is that they're seeded.
+// The categories every archive starts with. They are ordinary categories — the
+// only thing special about them is that they're seeded.
 export const DEFAULT_CATEGORIES: Category[] = [
-  { key: '_Sprzedaz', kind: 'sold' },
+  { key: '_Sprzedaż', kind: 'sold' },
   { key: '_Koszty', kind: 'bought' },
-  { key: 'Wyciagi', kind: 'other' },
+  { key: '_Koszty_ipbox', kind: 'bought' },
+  { key: '_Koszty_pozostale', kind: 'bought' },
+  { key: 'Wyciągi', kind: 'other' },
 ]
 
 export function defaultCategories(): Category[] {

@@ -14,6 +14,8 @@ export interface ParsedInvoiceLine {
   unit: string
   quantity: string
   unitPrice: string
+  // The XML only carried a gross unit price (P_9B), so unitPrice is brutto.
+  unitPriceGross: boolean
   netAmount: string
   vatRate: string
 }
@@ -45,6 +47,26 @@ function text(el: Element | null | undefined, tag: string): string | undefined {
   if (!el) return undefined
   const found = el.getElementsByTagName(tag)[0]
   return found?.textContent?.trim() || undefined
+}
+
+// Amounts in an FA(3) invoice are split per VAT rate (P_13_1 = 23%, P_13_2 =
+// 8%, ...), so a total is the sum of whichever buckets the invoice uses.
+function sumAmounts(el: Element | undefined, tags: string[]): string | undefined {
+  const values = tags.map((tag) => Number(text(el, tag))).filter((value) => !Number.isNaN(value))
+  return values.length ? values.reduce((total, value) => total + value, 0).toFixed(2) : undefined
+}
+
+const NET_TAGS = ['P_13_1', 'P_13_2', 'P_13_3', 'P_13_4', 'P_13_5', 'P_13_6_1', 'P_13_6_2', 'P_13_6_3', 'P_13_7', 'P_13_8', 'P_13_9', 'P_13_10', 'P_13_11']
+const VAT_TAGS = ['P_14_1', 'P_14_2', 'P_14_3', 'P_14_4', 'P_14_5']
+
+// A line that only states gross (P_11A) and VAT (P_11Vat), as some issuers
+// like fuel stations do, has its net worked out from the two.
+function lineNet(wiersz: Element): string {
+  const net = text(wiersz, 'P_11')
+  if (net) return net
+  const gross = Number(text(wiersz, 'P_11A'))
+  const vat = Number(text(wiersz, 'P_11Vat'))
+  return Number.isNaN(gross) || Number.isNaN(vat) ? '' : (gross - vat).toFixed(2)
 }
 
 function parseParty(el: Element | null | undefined): ParsedInvoiceParty {
@@ -84,8 +106,9 @@ export function parseInvoiceXml(xml: string): ParsedInvoice {
         name: text(wiersz, 'P_7') ?? '',
         unit: text(wiersz, 'P_8A') ?? '',
         quantity: text(wiersz, 'P_8B') ?? '',
-        unitPrice: text(wiersz, 'P_9A') ?? '',
-        netAmount: text(wiersz, 'P_11') ?? '',
+        unitPrice: text(wiersz, 'P_9A') ?? text(wiersz, 'P_9B') ?? '',
+        unitPriceGross: !text(wiersz, 'P_9A') && !!text(wiersz, 'P_9B'),
+        netAmount: lineNet(wiersz),
         vatRate: text(wiersz, 'P_12') ?? '',
       }))
     : Array.from(fa?.getElementsByTagName('ZamowienieWiersz') ?? []).map((wiersz) => ({
@@ -94,6 +117,7 @@ export function parseInvoiceXml(xml: string): ParsedInvoice {
         unit: text(wiersz, 'P_8AZ') ?? '',
         quantity: text(wiersz, 'P_8BZ') ?? '',
         unitPrice: text(wiersz, 'P_9AZ') ?? '',
+        unitPriceGross: false,
         netAmount: text(wiersz, 'P_11NettoZ') ?? '',
         vatRate: text(wiersz, 'P_12Z') ?? '',
       }))
@@ -108,8 +132,8 @@ export function parseInvoiceXml(xml: string): ParsedInvoice {
     seller: parseParty(podmiot1),
     buyer: parseParty(podmiot2),
     lines,
-    netTotal: text(fa, 'P_13_1'),
-    vatTotal: text(fa, 'P_14_1'),
+    netTotal: sumAmounts(fa, NET_TAGS),
+    vatTotal: sumAmounts(fa, VAT_TAGS),
     grossTotal: text(fa, 'P_15'),
     payment: {
       dueDate: text(termin, 'Termin'),

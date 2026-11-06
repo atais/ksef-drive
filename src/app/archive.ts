@@ -204,7 +204,9 @@ export interface CategorySection {
 
 // Lists the files in each category subfolder of a month, in category order. A
 // missing subfolder yields an empty section rather than being dropped, so the
-// page layout stays stable.
+// page layout stays stable. Folders that aren't configured categories (an older
+// archive's own layout, say) follow as plain "other" sections, so nothing
+// sitting in a month is hidden.
 export function listMonthCategories(
   accessToken: string,
   monthFolderId: string,
@@ -212,8 +214,14 @@ export function listMonthCategories(
 ): Promise<CategorySection[]> {
   return listSubfolders(accessToken, monthFolderId).then((subfolders) => {
     const byName = new Map(subfolders.map((folder) => [folder.name, folder]))
+    const known = new Set(categories.map((category) => category.key))
+    const extras: Category[] = subfolders
+      .filter((folder) => !known.has(folder.name) && !folder.name.startsWith('.'))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((folder) => ({ key: folder.name, kind: 'other' }))
+
     return Promise.all(
-      categories.map(async (category) => ({
+      [...categories, ...extras].map(async (category) => ({
         category,
         files: byName.has(category.key) ? await listFilesOnly(accessToken, byName.get(category.key)!.id) : [],
       }))

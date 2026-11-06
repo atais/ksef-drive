@@ -93,7 +93,7 @@
                 <td class="py-2 text-gray-600">{line.lp}</td>
                 <td class="py-2 text-gray-900">{line.name}</td>
                 <td class="py-2 text-right text-gray-900">{line.quantity} {line.unit}</td>
-                <td class="py-2 text-right text-gray-900">{line.unitPrice}</td>
+                <td class="py-2 text-right text-gray-900">{line.unitPrice}{line.unitPriceGross ? ` (${i18n.t('preview.gross').toLowerCase()})` : ''}</td>
                 <td class="py-2 text-right text-gray-900">{line.netAmount}</td>
                 <td class="py-2 text-right text-gray-900">{line.vatRate}</td>
               </tr>

@@ -15,6 +15,7 @@ import { deleteFileByName, folderPath, readJsonFile, writeJsonFile, type DriveFi
 import { pickFolder } from '../gdrive/folderPicker'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
+import { archiveSettings } from './archiveSettings.svelte'
 import { categoriesStore } from './categoriesStore.svelte'
 import { errorMessage } from './errors'
 import { i18n } from './i18n.svelte'
@@ -139,6 +140,7 @@ export class Session {
     this.rootFolderId = root.id
     this.runInBackground(async () => (this.archivePath = await folderPath(token, root.id)))
     await categoriesStore.load(token, this.configFolderId)
+    await archiveSettings.load(token, this.configFolderId)
     this.runInBackground(() => ensureYearFolders(token, root.id, categoriesStore.names))
     return root.id
   }

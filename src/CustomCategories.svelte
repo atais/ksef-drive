@@ -1,17 +1,12 @@
 <script lang="ts">
   import { Icon, ChevronDown, ChevronUp, Plus, Trash } from 'svelte-hero-icons'
-  import { categoryKinds, kindLabel, type CategoryKind } from './app/categories'
+  import { categoryKinds, kindLabel } from './app/categories'
+  import { kindBadge } from './app/categoryStyle'
   import { categoriesStore } from './app/categoriesStore.svelte'
   import { CustomCategoriesPage } from './app/customCategories.svelte'
   import { i18n } from './app/i18n.svelte'
   import ErrorBanner from './ErrorBanner.svelte'
   import Spinner from './Spinner.svelte'
-
-  const KIND_BADGES: Record<CategoryKind, string> = {
-    sold: 'bg-green-50 text-green-700',
-    bought: 'bg-amber-50 text-amber-700',
-    other: 'bg-gray-100 text-gray-600',
-  }
 
   const page = new CustomCategoriesPage()
   const kinds = $derived(categoryKinds())
@@ -58,7 +53,7 @@
           <p class="text-sm font-semibold text-gray-900 truncate">{category.key}</p>
         </div>
         <span class="text-xs text-gray-500 flex-shrink-0">{i18n.t('customCategories.category')}</span>
-        <span class="px-2 py-0.5 text-xs font-semibold rounded-full {KIND_BADGES[category.kind]}">
+        <span class="px-2 py-0.5 text-xs font-semibold rounded-full {kindBadge(category.kind)}">
           {kindLabel(category.kind)}
         </span>
         <button

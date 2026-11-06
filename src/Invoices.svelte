@@ -1,5 +1,7 @@
 <script lang="ts">
   import { Icon, Trash, ArrowPath, Check, Eye, EyeSlash, DocumentMagnifyingGlass } from 'svelte-hero-icons'
+  import { kindForRole } from './app/categories'
+  import { kindBadge, kindSelect } from './app/categoryStyle'
   import { ksefPreview } from './app/invoicePreview.svelte'
   import { InvoicesStore, statusFilters, type StatusFilter } from './app/invoicesStore.svelte'
   import { i18n } from './app/i18n.svelte'
@@ -112,7 +114,7 @@
                       value={row.category}
                       onchange={(e) => store.setCategory(row.entry, (e.target as HTMLSelectElement).value)}
                       title={i18n.t('invoices.filingCategory')}
-                      class="px-2 py-1 text-xs font-semibold rounded-lg border {row.role === 'seller' ? 'border-green-200 bg-green-50 text-green-700' : 'border-amber-200 bg-amber-50 text-amber-700'}"
+                      class="px-2 py-1 text-xs font-semibold rounded-lg border {kindSelect(kindForRole(row.role))}"
                     >
                       {#each row.categoryOptions as option (option.key)}
                         <option value={option.key}>{option.key}</option>
@@ -120,7 +122,7 @@
                     </select>
                   {:else}
                     <span
-                      class="px-2 py-0.5 text-xs font-semibold rounded-full {row.role === 'seller' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}"
+                      class="px-2 py-0.5 text-xs font-semibold rounded-full {kindBadge(kindForRole(row.role))}"
                       title={i18n.t('invoices.filedTo', { category: row.category })}
                     >
                       {row.category}

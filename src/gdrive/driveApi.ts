@@ -10,6 +10,8 @@ const FOLDER_MIME = 'application/vnd.google-apps.folder'
 export interface DriveFile {
   id: string
   name: string
+  // Only present for queries that ask for it (see findFilesNamed).
+  parents?: string[]
 }
 
 async function driveFetch(accessToken: string, url: string, init: RequestInit = {}): Promise<Response> {
@@ -42,11 +44,11 @@ const isNotFolder = `mimeType!=${quote(FOLDER_MIME)}`
 
 // The single entry point for "find files matching this query". Every listing
 // helper below is just a different set of clauses.
-export async function queryFiles(accessToken: string, clauses: string[]): Promise<DriveFile[]> {
+export async function queryFiles(accessToken: string, clauses: string[], fields = 'id,name'): Promise<DriveFile[]> {
   const params = new URLSearchParams({
     q: clauses.join(' and '),
     spaces: 'drive',
-    fields: 'files(id,name)',
+    fields: `files(${fields})`,
     pageSize: '1000',
   })
 
@@ -70,6 +72,14 @@ export function findFolders(accessToken: string, name: string, parentId?: string
   return queryFiles(accessToken, clauses)
 }
 
+// Every non-folder file with this name, wherever it sits (or just in one
+// folder), with its parents: one request answers "which folders contain it".
+export function findFilesNamed(accessToken: string, name: string, parentId?: string): Promise<DriveFile[]> {
+  const clauses = [named(name), isNotFolder, NOT_TRASHED]
+  if (parentId) clauses.push(inParent(parentId))
+  return queryFiles(accessToken, clauses, 'id,name,parents')
+}
+
 export async function findFile(accessToken: string, folderId: string, filename: string): Promise<DriveFile | null> {
   const files = await queryFiles(accessToken, [named(filename), inParent(folderId), NOT_TRASHED])
   return files[0] ?? null
@@ -89,8 +99,15 @@ async function createFolder(accessToken: string, name: string, parentId?: string
   return { id: data.id, name: data.name }
 }
 
+// Moves to Drive's trash rather than deleting for good (the API's DELETE skips
+// the trash), so a mistaken removal can be restored for ~30 days. A trashed
+// folder takes its contents with it.
 export async function deleteFile(accessToken: string, fileId: string): Promise<void> {
-  await driveFetch(accessToken, `${DRIVE_API}/files/${fileId}`, { method: 'DELETE' })
+  await driveFetch(accessToken, `${DRIVE_API}/files/${fileId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trashed: true }),
+  })
 }
 
 export async function moveFile(

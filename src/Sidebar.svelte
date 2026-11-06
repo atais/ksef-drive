@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Icon, ChevronDown, ChevronRight, ArchiveBox } from 'svelte-hero-icons'
+  import { Icon, ChevronDown, ChevronRight, ArchiveBox, CheckCircle } from 'svelte-hero-icons'
+  import { archiveSettings } from './app/archiveSettings.svelte'
   import { folderTree } from './app/folderTree.svelte'
   import { navigation } from './app/navigation.svelte'
   import { session } from './app/session.svelte'
@@ -9,6 +10,7 @@
     // Re-read the tree whenever the Drive connection changes.
     void session.accessToken
     void session.rootFolderId
+    void archiveSettings.completionName
     return folderTree.load()
   })
 </script>
@@ -45,9 +47,12 @@
                     <button
                       type="button"
                       onclick={() => navigation.selectFolder(month.id)}
-                      class="w-full text-left pl-10 pr-4 py-2 text-sm transition-colors {navigation.highlightedFolderId === month.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}"
+                      class="w-full flex items-center justify-between text-left pl-10 pr-4 py-2 text-sm transition-colors {navigation.highlightedFolderId === month.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}"
                     >
-                      {month.name}
+                      <span>{month.name}</span>
+                      {#if folderTree.isComplete(month.id)}
+                        <Icon src={CheckCircle} class="w-4 h-4 flex-shrink-0 text-green-600" title={archiveSettings.completionName} />
+                      {/if}
                     </button>
                   </li>
                 {/each}
