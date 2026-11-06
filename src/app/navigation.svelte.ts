@@ -25,15 +25,18 @@ export class Navigation {
   sidebarOpen = $state(false)
   selectedFolderId = $state<string | null>(null)
 
+  // The tab actually showing: until KSeF is configured the picked view is
+  // overridden by Settings, and the header and sidebar must say so.
+  readonly currentView: View = $derived(session.ksefCredentials ? this.view : 'settings')
+
   readonly activeView: ActiveView = $derived.by(() => {
-    if (this.view === 'settings' || !session.ksefCredentials) return 'settings'
-    if (this.view === 'files') return 'files'
+    if (this.currentView !== 'invoices') return this.currentView
     return session.ksefSessionToken ? 'invoices' : 'connecting'
   })
 
   // The sidebar highlight only applies on the Files page — the selection is
   // remembered elsewhere, just not shown.
-  readonly highlightedFolderId = $derived(this.view === 'files' ? this.selectedFolderId : null)
+  readonly highlightedFolderId = $derived(this.currentView === 'files' ? this.selectedFolderId : null)
 
   go(view: View) {
     this.view = view

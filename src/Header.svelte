@@ -25,7 +25,7 @@
         {#each NAV_ITEMS as { id, label } (id)}
           <button
             onclick={() => navigation.go(id)}
-            class="flex items-center justify-center gap-2 px-4 h-full transition-colors text-sm font-medium {navigation.view === id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}"
+            class="flex items-center justify-center gap-2 px-4 h-full transition-colors text-sm font-medium {navigation.currentView === id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}"
           >
             <span>{label}</span>
           </button>
