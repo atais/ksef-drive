@@ -177,6 +177,10 @@ export class Session {
       this.ksefCredentials = stored.ksefCredentials
 
       await this.openArchive(stored.accessToken)
+      // The archive's .config is the source of truth; the stored copy can be
+      // stale or belong to another archive (e.g. after picking a folder).
+      this.ksefCredentials = await this.loadKsefCredentials(stored.accessToken, this.configFolderId!)
+      this.persist()
       if (this.ksefCredentials) void this.authenticateKsef(this.ksefCredentials)
     } catch (error) {
       console.error('Session restore failed:', error)
