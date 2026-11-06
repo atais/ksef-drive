@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { pickFolder } from './gdrive/folderPicker'
   import { errorMessage } from './app/errors'
   import { i18n } from './app/i18n.svelte'
   import { session } from './app/session.svelte'
@@ -10,8 +9,7 @@
   async function choose() {
     error = null
     try {
-      const folder = await pickFolder(session.requireDrive().accessToken)
-      if (folder) session.setArchiveFolder(folder)
+      await session.chooseArchiveFolder()
     } catch (e) {
       error = errorMessage(e, i18n.t('settings.archiveFailedLoad'))
     }

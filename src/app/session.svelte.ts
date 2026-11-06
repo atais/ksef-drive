@@ -12,6 +12,7 @@ import {
   type GoogleUser,
 } from '../gdrive/googleAuth'
 import { deleteFileByName, readJsonFile, writeJsonFile, type DriveFile } from '../gdrive/driveApi'
+import { pickFolder } from '../gdrive/folderPicker'
 import { authenticateWithKsef, type KsefCredentials } from '../ksef/ksefAuth'
 import { ensureArchiveRoot, ensureConfigFolder, ensureYearFolders } from './archive'
 import { categoriesStore } from './categoriesStore.svelte'
@@ -123,7 +124,13 @@ export class Session {
     return root.id
   }
 
-  // Everything loaded so far belongs to the old archive, so reopen from scratch.
+  // Lets the user pick the archive root in Drive's own picker. Everything
+  // loaded so far belongs to the old archive, so a pick reopens from scratch.
+  async chooseArchiveFolder() {
+    const folder = await pickFolder(this.requireDrive().accessToken)
+    if (folder) this.setArchiveFolder(folder)
+  }
+
   setArchiveFolder(folder: DriveFile | null) {
     if (folder) localStorage.setItem(ARCHIVE_FOLDER_KEY, JSON.stringify(folder))
     else localStorage.removeItem(ARCHIVE_FOLDER_KEY)

@@ -20,7 +20,6 @@ interface DocsView {
   setIncludeFolders(on: boolean): DocsView
   setSelectFolderEnabled(on: boolean): DocsView
   setOwnedByMe(on: boolean): DocsView
-  setEnableDrives(on: boolean): DocsView
 }
 interface PickerApi {
   PickerBuilder: new () => PickerBuilder
