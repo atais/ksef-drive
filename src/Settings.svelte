@@ -9,18 +9,19 @@
 <!-- Side by side once there's room for two full-width forms; stacked with a
      rule between them below that. -->
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-10 items-start">
-  <div class="max-w-2xl">
+  <!-- Archive location comes first and is never gated: it is also the way out
+       of an archive that has no KSeF credentials yet. -->
+  <div class="max-w-2xl space-y-10">
+    <ArchiveLocation />
     <KsefCredentialsForm currentCredentials={session.ksefCredentials} />
   </div>
 
-  <!-- Archive location is always here: it is also the way out of an archive
-       that has no KSeF credentials. Categories wait for KSEF to be set up,
-       so the onboarding form isn't buried. -->
-  <div class="max-w-2xl space-y-10 border-t border-gray-200 pt-10 xl:border-t-0 xl:pt-0">
-    <ArchiveLocation />
-    <CompletionSetting />
-    {#if session.ksefCredentials}
+  <!-- Only once KSEF is configured: before that the page is an onboarding
+       form, and more sections would bury the one thing to do. -->
+  {#if session.ksefCredentials}
+    <div class="max-w-2xl space-y-10 border-t border-gray-200 pt-10 xl:border-t-0 xl:pt-0">
+      <CompletionSetting />
       <CustomCategories />
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>
